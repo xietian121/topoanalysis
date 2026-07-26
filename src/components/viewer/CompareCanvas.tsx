@@ -16,6 +16,8 @@ interface CompareCanvasProps {
   materialMetalness?: number
   objFaceData?: OBJFaceData | null
   forceSolid?: boolean
+  /** 结构跟随性叠加模式：在此 model 上方叠加半透明低模 */
+  overlayModel?: THREE.Group | null
 }
 
 export function CompareCanvas({
@@ -28,6 +30,7 @@ export function CompareCanvas({
   materialMetalness,
   objFaceData,
   forceSolid,
+  overlayModel,
 }: CompareCanvasProps) {
   return (
     <div className="relative w-full h-full bg-[#e8e8ed]">
@@ -51,6 +54,7 @@ export function CompareCanvas({
             materialMetalness={materialMetalness}
             objFaceData={objFaceData}
             forceSolid={forceSolid}
+            overlayModel={overlayModel}
           />
         </Suspense>
       </Canvas>

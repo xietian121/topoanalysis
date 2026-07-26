@@ -10,12 +10,18 @@ import { useEvalFlowStore, computeFlowTotal, isAllScored, type FlattenedCriterio
 import { useHighlightStore } from '@/stores/highlightStore'
 import { useViewerStore } from '@/stores/viewerStore'
 import { analyzeTopology } from '@/lib/topology-analyzer'
-import { STATIC_MODEL_STANDARD, DYNAMIC_MODEL_STANDARD } from '@/data/evaluation-standards'
+import { getStandardByType } from '@/data/evaluation-standards'
+import { MODEL_TYPE_LABELS, type EvaluationType } from '@/types/evaluation'
 import { RadarChart } from './RadarChart'
 import { ScoreBadge } from './ScoreBadge'
 import { FlowReviewCard } from './FlowReviewCard'
 
-export function EvalPanel() {
+interface EvalPanelProps {
+  /** 是否锁定评测标准（从向导进入后不可更改） */
+  locked?: boolean
+}
+
+export function EvalPanel({ locked = false }: EvalPanelProps) {
   const currentModel = useModelStore((s) => s.currentModel)
   const modelObject = useModelStore((s) => s.modelObject)
   const objFaceData = useModelStore((s) => s.objFaceData)
@@ -23,8 +29,8 @@ export function EvalPanel() {
   const loadReferenceModel = useModelStore((s) => s.loadReferenceModel)
   const clearReferenceModel = useModelStore((s) => s.clearReferenceModel)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const modelType = useEvalStore((s) => s.modelType)
-  const setModelType = useEvalStore((s) => s.setModelType)
+  const evaluationType = useEvalStore((s) => s.evaluationType)
+  const setEvaluationType = useEvalStore((s) => s.setEvaluationType)
   const autoReport = useEvalStore((s) => s.autoReport)
   const setAutoReport = useEvalStore((s) => s.setAutoReport)
   const manualRatings = useEvalStore((s) => s.manualRatings)
@@ -96,9 +102,9 @@ export function EvalPanel() {
     }
   }, [modelObject, objFaceData, setAutoReport, resetEval])
 
-  const standard = modelType === 'static' ? STATIC_MODEL_STANDARD : DYNAMIC_MODEL_STANDARD
+  const standard = getStandardByType(evaluationType)
   const scores = autoReport
-    ? computeTotalScore(modelType, autoReport, manualRatings)
+    ? computeTotalScore(evaluationType, autoReport, manualRatings)
     : { autoTotal: 0, manualTotal: 0, total: 0, maxTotal: 100 }
 
   // Derive full criteria list from standard — always available once model is loaded
@@ -188,7 +194,7 @@ export function EvalPanel() {
       modelName: currentModel.name,
       modelFormat: currentModel.format,
       modelFileSize: currentModel.fileSize,
-      modelType,
+      evaluationType,
       createdAt: new Date().toISOString(),
       autoTotal: scores.autoTotal,
       manualTotal: scores.manualTotal,
@@ -200,7 +206,7 @@ export function EvalPanel() {
       reviewScores: flowReviewScores ?? undefined,
     }
     addRecord(record)
-  }, [currentModel, autoReport, modelType, scores, displayScores, manualRatings, flowReviewScores, addRecord])
+  }, [currentModel, autoReport, evaluationType, scores, displayScores, manualRatings, flowReviewScores, addRecord])
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`
@@ -239,26 +245,35 @@ export function EvalPanel() {
           </>
         )}
 
-        {/* Model type toggle */}
+        {/* Model type — locked after wizard, shown as label; otherwise toggleable */}
         <section>
           <h4 className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
-            模型类型
+            评测标准
           </h4>
-          <div className="flex gap-1">
-            {(['static', 'dynamic'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setModelType(t)}
-                className={`flex-1 rounded-lg py-1.5 text-[12px] font-medium transition-all duration-200 ${
-                  modelType === t
-                    ? 'bg-black/[0.06] text-text-primary'
-                    : 'text-text-tertiary hover:bg-black/[0.04]'
-                }`}
-              >
-                {t === 'static' ? '静态模型' : '可动模型'}
-              </button>
-            ))}
-          </div>
+          {locked ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] font-medium text-text-primary px-2.5 py-1 rounded-full bg-accent/[0.06]">
+                {MODEL_TYPE_LABELS[evaluationType]}
+              </span>
+              <span className="text-[10px] text-text-tertiary">已在向导中设定</span>
+            </div>
+          ) : (
+            <div className="flex gap-1 flex-wrap">
+              {(['game-static', 'game-dynamic', 'general-static', 'general-dynamic'] as EvaluationType[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setEvaluationType(t)}
+                  className={`rounded-lg py-1.5 px-2.5 text-[11px] font-medium transition-all duration-200 ${
+                    evaluationType === t
+                      ? 'bg-black/[0.06] text-text-primary'
+                      : 'text-text-tertiary hover:bg-black/[0.04]'
+                  }`}
+                >
+                  {MODEL_TYPE_LABELS[t]}
+                </button>
+              ))}
+            </div>
+          )}
         </section>
 
         <Separator className="bg-black/5" />

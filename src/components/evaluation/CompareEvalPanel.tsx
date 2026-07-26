@@ -10,15 +10,16 @@ import { useEvalFlowStore, isAllScored, computeFlowTotal, type FlattenedCriterio
 import { useHighlightStore } from '@/stores/highlightStore'
 import { useViewerStore } from '@/stores/viewerStore'
 import { analyzeTopology } from '@/lib/topology-analyzer'
-import { STATIC_MODEL_STANDARD, DYNAMIC_MODEL_STANDARD } from '@/data/evaluation-standards'
+import { getStandardByType } from '@/data/evaluation-standards'
+import { MODEL_TYPE_LABELS, type EvaluationType } from '@/types/evaluation'
 import { RadarChart } from './RadarChart'
 import { ScoreBadge } from './ScoreBadge'
 import { FlowReviewCard } from './FlowReviewCard'
 
 export function CompareEvalPanel() {
   const lowModel = useCompareStore((s) => s.lowModel)
-  const modelType = useEvalStore((s) => s.modelType)
-  const setModelType = useEvalStore((s) => s.setModelType)
+  const evaluationType = useEvalStore((s) => s.evaluationType)
+  const setEvaluationType = useEvalStore((s) => s.setEvaluationType)
   const autoReport = useEvalStore((s) => s.autoReport)
   const setAutoReport = useEvalStore((s) => s.setAutoReport)
   const manualRatings = useEvalStore((s) => s.manualRatings)
@@ -90,9 +91,9 @@ export function CompareEvalPanel() {
     }
   }, [lowModel.object, lowModel.faceData, setAutoReport, resetEval])
 
-  const standard = modelType === 'static' ? STATIC_MODEL_STANDARD : DYNAMIC_MODEL_STANDARD
+  const standard = getStandardByType(evaluationType)
   const scores = autoReport
-    ? computeTotalScore(modelType, autoReport, manualRatings)
+    ? computeTotalScore(evaluationType, autoReport, manualRatings)
     : { autoTotal: 0, manualTotal: 0, total: 0, maxTotal: 100 }
 
   // Derive full criteria list from standard — always available once model is loaded
@@ -182,7 +183,7 @@ export function CompareEvalPanel() {
       modelName: lowModel.info.name,
       modelFormat: lowModel.info.format,
       modelFileSize: lowModel.info.fileSize,
-      modelType,
+      evaluationType,
       createdAt: new Date().toISOString(),
       autoTotal: scores.autoTotal,
       manualTotal: scores.manualTotal,
@@ -194,7 +195,7 @@ export function CompareEvalPanel() {
       reviewScores: flowReviewScores ?? undefined,
     }
     addRecord(record)
-  }, [lowModel.info, autoReport, modelType, scores, displayScores, manualRatings, flowReviewScores, addRecord])
+  }, [lowModel.info, autoReport, evaluationType, scores, displayScores, manualRatings, flowReviewScores, addRecord])
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`
@@ -233,23 +234,23 @@ export function CompareEvalPanel() {
           </>
         )}
 
-        {/* Model type toggle */}
+        {/* Model type — Phase 2: 4-type toggle */}
         <section>
           <h4 className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
-            模型类型
+            评测标准
           </h4>
-          <div className="flex gap-1">
-            {(['static', 'dynamic'] as const).map((t) => (
+          <div className="flex gap-1 flex-wrap">
+            {(['game-static', 'game-dynamic', 'general-static', 'general-dynamic'] as EvaluationType[]).map((t) => (
               <button
                 key={t}
-                onClick={() => setModelType(t)}
-                className={`flex-1 rounded-lg py-1.5 text-[12px] font-medium transition-all duration-200 ${
-                  modelType === t
+                onClick={() => setEvaluationType(t)}
+                className={`rounded-lg py-1.5 px-2.5 text-[11px] font-medium transition-all duration-200 ${
+                  evaluationType === t
                     ? 'bg-black/[0.06] text-text-primary'
                     : 'text-text-tertiary hover:bg-black/[0.04]'
                 }`}
               >
-                {t === 'static' ? '静态模型' : '可动模型'}
+                {MODEL_TYPE_LABELS[t]}
               </button>
             ))}
           </div>

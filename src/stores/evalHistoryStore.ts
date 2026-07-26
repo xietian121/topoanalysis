@@ -2,14 +2,16 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { TopologyReport } from '@/lib/topology-analyzer'
 import type { RatingLevel } from './evalStore'
-import type { ModelType } from '@/types/evaluation'
+import type { EvaluationType, EvaluationSuggestions } from '@/types/evaluation'
+import type { ModelInfo } from '@/types/model'
 
 export interface EvalHistoryRecord {
   id: string
   modelName: string
   modelFormat: string
   modelFileSize: number
-  modelType: ModelType
+  /** Phase 2: 评测标准组合键 */
+  evaluationType: EvaluationType
   createdAt: string // ISO 8601
   autoTotal: number
   manualTotal: number
@@ -24,14 +26,33 @@ export interface EvalHistoryRecord {
   autoReport: TopologyReport | null
   manualRatings: Record<string, RatingLevel>
   reviewScores?: Record<string, number>
+
+  // ===== Phase 2 新增字段 =====
+  /** 是否为官方示例模型 */
+  isExample?: boolean
+  /** 模型缩略图 URL */
+  thumbnailUrl?: string
+  /** 示例模型文件 URL */
+  modelUrl?: string
+  /** 模型信息快照（用于重新加载） */
+  modelInfoSnapshot?: ModelInfo
+  /** 优化建议（评测后自动生成） */
+  suggestions?: EvaluationSuggestions
+  /** 评测状态 */
+  evalStatus?: 'completed' | 'in_progress' | 'not_started'
 }
 
 interface EvalHistoryStore {
   records: EvalHistoryRecord[]
 
   addRecord: (record: EvalHistoryRecord) => void
+  updateRecord: (id: string, updates: Partial<EvalHistoryRecord>) => void
   removeRecord: (id: string) => void
   clearAll: () => void
+  /** 获取非示例的用户模型记录 */
+  getUserRecords: () => EvalHistoryRecord[]
+  /** 获取示例模型记录 */
+  getExampleRecords: () => EvalHistoryRecord[]
 }
 
 function makeId() {
@@ -42,12 +63,17 @@ export { makeId }
 
 export const useEvalHistoryStore = create<EvalHistoryStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       records: [],
 
       addRecord: (record) =>
         set((s) => ({
-          records: [{ ...record, id: record.id || makeId() }, ...s.records].slice(0, 100),
+          records: [{ ...record, id: record.id || makeId() }, ...s.records].slice(0, 200),
+        })),
+
+      updateRecord: (id, updates) =>
+        set((s) => ({
+          records: s.records.map((r) => (r.id === id ? { ...r, ...updates } : r)),
         })),
 
       removeRecord: (id) =>
@@ -56,10 +82,38 @@ export const useEvalHistoryStore = create<EvalHistoryStore>()(
         })),
 
       clearAll: () => set({ records: [] }),
+
+      getUserRecords: () => get().records.filter((r) => !r.isExample),
+
+      getExampleRecords: () => get().records.filter((r) => r.isExample),
     }),
     {
       name: 'topoeval-history',
-      version: 1,
+      version: 2,
+      // Migration from v1: old modelType 'static'|'dynamic' → 'game-static'|'game-dynamic'
+      migrate: (persistedState: unknown, version: number) => {
+        if (version < 2) {
+          const state = persistedState as { records: EvalHistoryRecord[] }
+          if (state.records) {
+            state.records = state.records.map((r) => {
+              // Migrate old modelType field
+              const oldType = (r as unknown as { modelType?: string }).modelType
+              if (oldType === 'static' || oldType === 'dynamic') {
+                r.evaluationType = `game-${oldType}` as EvaluationType
+                delete (r as unknown as { modelType?: string }).modelType
+              }
+              if (!r.evaluationType) {
+                r.evaluationType = 'game-static'
+              }
+              if (!r.evalStatus) {
+                r.evalStatus = 'completed'
+              }
+              return r
+            })
+          }
+        }
+        return persistedState as EvalHistoryStore
+      },
     },
   ),
 )

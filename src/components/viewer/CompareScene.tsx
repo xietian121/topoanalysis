@@ -17,6 +17,8 @@ interface CompareSceneProps {
   materialMetalness?: number
   objFaceData?: OBJFaceData | null
   forceSolid?: boolean
+  /** 结构跟随性叠加模式：在此 model 上方叠加半透明低模 */
+  overlayModel?: THREE.Group | null
 }
 
 export function CompareScene({
@@ -29,6 +31,7 @@ export function CompareScene({
   materialMetalness,
   objFaceData,
   forceSolid,
+  overlayModel,
 }: CompareSceneProps) {
   return (
     <>
@@ -67,21 +70,47 @@ export function CompareScene({
         />
       )}
 
-      {/* Model */}
-      {model && (
-        <LoadedModel
-          model={model}
-          renderMode={renderMode}
-          objFaceData={objFaceData}
-          materialColor={materialColor}
-          materialRoughness={materialRoughness}
-          materialMetalness={materialMetalness}
-          forceSolid={forceSolid}
-        />
+      {/* Structure comparison mode: dual-model overlay */}
+      {overlayModel && model ? (
+        <>
+          {/* Base (reference/high-poly) model — original material, normalized to overlay model's bounds */}
+          <LoadedModel
+            model={model}
+            normalizationFrom={overlayModel}
+            renderMode="solid"
+            forceSolid
+            objFaceData={null}
+          />
+          {/* Overlay (low-poly) model — blue semi-transparent */}
+          <LoadedModel
+            model={overlayModel}
+            renderMode="solid"
+            forceSolid
+            objFaceData={objFaceData}
+            materialColor="#4a90d9"
+            materialRoughness={0.3}
+            opacity={0.55}
+          />
+        </>
+      ) : (
+        <>
+          {/* Normal mode: single model */}
+          {model && (
+            <LoadedModel
+              model={model}
+              renderMode={renderMode}
+              objFaceData={objFaceData}
+              materialColor={materialColor}
+              materialRoughness={materialRoughness}
+              materialMetalness={materialMetalness}
+              forceSolid={forceSolid}
+            />
+          )}
+        </>
       )}
 
-      {/* Highlight overlay — only on low-poly (right) side */}
-      {side === 'right' && model && (
+      {/* Highlight overlay — only on low-poly (right) side, skip in overlay mode */}
+      {side === 'right' && model && !overlayModel && (
         <HighlightOverlay model={model} objFaceData={objFaceData} />
       )}
     </>

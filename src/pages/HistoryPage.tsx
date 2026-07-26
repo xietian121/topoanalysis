@@ -85,7 +85,7 @@ function HistoryCard({ record }: { record: EvalHistoryRecord }) {
           {/* Radar chart */}
           <div className="flex justify-center pt-4">
             <RadarChart
-              dimensions={record.dimensionScores}
+              dimensions={record.dimensionScores.map(d => ({ name: d.dimensionName, score: d.score, maxScore: d.maxScore }))}
               size={200}
             />
           </div>

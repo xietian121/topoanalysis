@@ -13,16 +13,12 @@ import { analyzeTopology } from '@/lib/topology-analyzer'
 import { STATIC_MODEL_STANDARD, DYNAMIC_MODEL_STANDARD } from '@/data/evaluation-standards'
 import { RadarChart } from './RadarChart'
 import { ScoreBadge } from './ScoreBadge'
-import { AutoResultRow } from './AutoResultRow'
-import { ManualRatingRow } from './ManualRatingRow'
 import { FlowReviewCard } from './FlowReviewCard'
-import type { RatingLevel } from '@/stores/evalStore'
 
 export function EvalPanel() {
   const currentModel = useModelStore((s) => s.currentModel)
   const modelObject = useModelStore((s) => s.modelObject)
   const objFaceData = useModelStore((s) => s.objFaceData)
-  const referenceModel = useModelStore((s) => s.referenceModel)
   const referenceModelInfo = useModelStore((s) => s.referenceModelInfo)
   const loadReferenceModel = useModelStore((s) => s.loadReferenceModel)
   const clearReferenceModel = useModelStore((s) => s.clearReferenceModel)
@@ -32,7 +28,6 @@ export function EvalPanel() {
   const autoReport = useEvalStore((s) => s.autoReport)
   const setAutoReport = useEvalStore((s) => s.setAutoReport)
   const manualRatings = useEvalStore((s) => s.manualRatings)
-  const setManualRating = useEvalStore((s) => s.setManualRating)
   const resetEval = useEvalStore((s) => s.resetEval)
   const addRecord = useEvalHistoryStore((s) => s.addRecord)
   const flowReviewScores = useEvalStore((s) => s.flowReviewScores)
@@ -140,10 +135,6 @@ export function EvalPanel() {
       }
     })
   }, [standard, autoReport, manualRatings])
-
-  const handleRate = (criterionId: string, level: RatingLevel) => {
-    setManualRating(criterionId, level)
-  }
 
   // Start the sequential review flow
   const handleStartFlow = useCallback(() => {

@@ -13,10 +13,7 @@ import { analyzeTopology } from '@/lib/topology-analyzer'
 import { STATIC_MODEL_STANDARD, DYNAMIC_MODEL_STANDARD } from '@/data/evaluation-standards'
 import { RadarChart } from './RadarChart'
 import { ScoreBadge } from './ScoreBadge'
-import { AutoResultRow } from './AutoResultRow'
-import { ManualRatingRow } from './ManualRatingRow'
 import { FlowReviewCard } from './FlowReviewCard'
-import type { RatingLevel } from '@/stores/evalStore'
 
 export function CompareEvalPanel() {
   const lowModel = useCompareStore((s) => s.lowModel)
@@ -25,7 +22,6 @@ export function CompareEvalPanel() {
   const autoReport = useEvalStore((s) => s.autoReport)
   const setAutoReport = useEvalStore((s) => s.setAutoReport)
   const manualRatings = useEvalStore((s) => s.manualRatings)
-  const setManualRating = useEvalStore((s) => s.setManualRating)
   const resetEval = useEvalStore((s) => s.resetEval)
   const addRecord = useEvalHistoryStore((s) => s.addRecord)
   const flowReviewScores = useEvalStore((s) => s.flowReviewScores)
@@ -133,10 +129,6 @@ export function CompareEvalPanel() {
       }
     })
   }, [standard, autoReport, manualRatings])
-
-  const handleRate = (criterionId: string, level: RatingLevel) => {
-    setManualRating(criterionId, level)
-  }
 
   // Start the sequential review flow
   const handleStartFlow = useCallback(() => {
@@ -424,7 +416,7 @@ export function CompareEvalPanel() {
               <h4 className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
                 得分分布
               </h4>
-              <RadarChart dimensions={displayScores.dimensionScores} size={180} />
+              <RadarChart dimensions={displayScores.dimensionScores.map(d => ({ name: d.dimensionName, score: d.score, maxScore: d.maxScore }))} size={180} />
               <div className="mt-3 space-y-1.5">
                 {displayScores.dimensionScores.map((dim) => (
                   <div key={dim.dimensionId} className="flex items-center justify-between">

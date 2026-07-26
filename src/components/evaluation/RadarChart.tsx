@@ -70,7 +70,7 @@ export function RadarChart({ dimensions, size = 180 }: RadarChartProps) {
       const x = cx + (raw.x - cx) * (labelR / radius)
       const y = cy + (raw.y - cy) * (labelR / radius)
       // Anchor adjustment for left/right sides
-      const anchor = x < cx - 4 ? 'end' : x > cx + 4 ? 'start' : 'middle'
+      const anchor: 'start' | 'middle' | 'end' = x < cx - 4 ? 'end' : x > cx + 4 ? 'start' : 'middle'
       return { x, y, anchor, name: dim.name }
     })
   }, [dimensions, angles, cx, cy, radius])

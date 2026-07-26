@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import * as THREE from 'three'
 import { useHighlightStore } from '@/stores/highlightStore'
 import { useEvalStore } from '@/stores/evalStore'
@@ -165,9 +165,7 @@ export function HighlightOverlay({ model, objFaceData, singleModel }: HighlightO
                 <bufferGeometry>
                   <bufferAttribute
                     attach="attributes-position"
-                    array={data.points.positions}
-                    count={data.points.positions.length / 3}
-                    itemSize={3}
+                    args={[data.points.positions, 3]}
                   />
                 </bufferGeometry>
                 <pointsMaterial

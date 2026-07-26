@@ -74,7 +74,7 @@ export const useCompareStore = create<CompareStore>()((set, get) => ({
     }))
 
     try {
-      const { parseOBJFile, parseFBXFile, extractModelStats } =
+      const { parseOBJFile, parseFBXFile } =
         await import('@/lib/model-parser')
 
       const ext = file.name.split('.').pop()?.toLowerCase() as 'obj' | 'fbx'
@@ -101,7 +101,7 @@ export const useCompareStore = create<CompareStore>()((set, get) => ({
           ...s.highModel,
           info: modelInfo,
           object: group,
-          faceData: null, // 高模不需要线框
+          faceData: null,
           isLoading: false,
           error: null,
         },

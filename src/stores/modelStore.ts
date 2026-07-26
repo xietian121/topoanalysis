@@ -116,7 +116,7 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
     console.log(`[TopoEval] 加载参考模型: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`)
 
     try {
-      const { parseOBJFile, parseFBXFile, extractModelStats } =
+      const { parseOBJFile, parseFBXFile } =
         await import('@/lib/model-parser')
 
       const ext = file.name.split('.').pop()?.toLowerCase() as 'obj' | 'fbx'

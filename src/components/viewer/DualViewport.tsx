@@ -3,7 +3,6 @@ import { CompareCanvas } from './CompareCanvas'
 import { ModelInfoOverlay } from './ModelInfoOverlay'
 import { useViewerStore } from '@/stores/viewerStore'
 import { useCompareStore } from '@/stores/compareStore'
-import type { RenderMode } from '@/types/viewer'
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`

@@ -84,7 +84,7 @@ function formatNum(n: number): string {
   return n.toLocaleString()
 }
 
-export function ModelInfoOverlay({ model, modelInfo, faceData, label, labelDesc }: ModelInfoOverlayProps) {
+export function ModelInfoOverlay({ model, modelInfo: _modelInfo, faceData, label, labelDesc }: ModelInfoOverlayProps) {
   const stats = useMemo(() => {
     if (!model) return null
     return extractStats(model, faceData)

@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+
+# Claude
+.claude/
+
+# Debug
+DebugPng/
+
+# Large model files (>100MB)
+Meshs/1/Character_1_gaomo.obj

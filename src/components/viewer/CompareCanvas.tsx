@@ -71,6 +71,14 @@ export function CompareCanvas({
           <p className="text-sm text-text-tertiary">等待模型加载...</p>
         </div>
       )}
+      {/* 操作提示 */}
+      {model && (
+        <div className="absolute bottom-2 left-2.5 pointer-events-none select-none">
+          <p className="text-[12px] text-black/55 whitespace-nowrap leading-tight tracking-wide">
+            ◉ 旋转 <span className="text-black/20 mx-1">·</span> ↕ 缩放 <span className="text-black/20 mx-1">·</span> ⊚ 平移
+          </p>
+        </div>
+      )}
     </div>
   )
 }

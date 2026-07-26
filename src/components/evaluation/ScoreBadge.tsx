@@ -1,5 +1,5 @@
 /**
- * Color-coded score badge.
+ * Color-coded score badge with 1 decimal precision.
  * - Low (0-40%): red
  * - Medium (40-70%): amber/yellow
  * - High (70-100%): green
@@ -17,7 +17,7 @@ export function ScoreBadge({ score, maxScore }: { score: number; maxScore: numbe
 
   return (
     <span className={`mono text-[11px] font-semibold ${colorClass}`}>
-      {score}
+      {score.toFixed(1)}
       <span className="text-text-tertiary font-normal">/{maxScore}</span>
       <span className={`ml-1 text-[10px] ${colorClass.replace('500', '400')}`}>
         ({pct}%)

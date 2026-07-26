@@ -4,6 +4,7 @@ import { ArrowRight, ArrowLeft, Gamepad2, Palette, Bone, Box, Upload } from 'luc
 import { useWizardStore } from '@/stores/wizardStore'
 import { useEvalStore } from '@/stores/evalStore'
 import { useModelStore } from '@/stores/modelStore'
+import { useLoadingStore } from '@/stores/loadingStore'
 import { ModelDropZone } from '@/components/viewer/ModelDropZone'
 import { MODEL_USAGE_LABELS, MODEL_ANIMATION_LABELS, type ModelUsage, type ModelAnimation } from '@/types/evaluation'
 
@@ -17,12 +18,37 @@ export function EvalWizardPage() {
   const error = useModelStore((s) => s.error)
   const loadModel = useModelStore((s) => s.loadModel)
   const modelObject = useModelStore((s) => s.modelObject)
+  const referenceModel = useModelStore((s) => s.referenceModel)
+
+  // Low-poly upload state
   const [uploadDone, setUploadDone] = useState(false)
+
+  // High-poly upload state
+  const [highUploadDone, setHighUploadDone] = useState(false)
+  const [highLoading, setHighLoading] = useState(false)
+  const [highError, setHighError] = useState<string | null>(null)
+  const [highModelName, setHighModelName] = useState('')
 
   // Ensure wizard is initialized on first mount
   useEffect(() => {
     startWizard()
   }, [])
+
+  // Reset upload states when models change externally
+  useEffect(() => {
+    if (modelObject) setUploadDone(true)
+    else setUploadDone(false)
+  }, [modelObject])
+
+  useEffect(() => {
+    if (referenceModel) {
+      setHighUploadDone(true)
+      setHighModelName(useModelStore.getState().referenceModelInfo?.name ?? '')
+    } else {
+      setHighUploadDone(false)
+      setHighModelName('')
+    }
+  }, [referenceModel])
 
   const handleSelectUsage = (u: ModelUsage) => {
     setUsage(u)
@@ -32,11 +58,41 @@ export function EvalWizardPage() {
     setAnimation(a)
   }
 
-  const handleFileAccepted = useCallback(async (files: File[]) => {
+  const handleLowFileAccepted = useCallback(async (files: File[]) => {
     if (files.length === 0) return
-    await loadModel(files[0])
-    setUploadDone(true)
+    const { startLoading, setProgress, setError: setLoadError, finishLoading, abortController } = useLoadingStore.getState()
+    startLoading()
+    try {
+      await loadModel(files[0], {
+        onProgress: (progress, stage, text) => {
+          setProgress(progress, stage as 'download' | 'parse' | 'analyze' | 'init' | 'done', text)
+        },
+        signal: abortController?.signal,
+      })
+      setUploadDone(true)
+      finishLoading()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '加载失败'
+      setLoadError(message)
+    }
   }, [loadModel])
+
+  const handleHighFileAccepted = useCallback(async (files: File[]) => {
+    if (files.length === 0) return
+    setHighLoading(true)
+    setHighError(null)
+    try {
+      const { loadReferenceModel } = useModelStore.getState()
+      await loadReferenceModel(files[0])
+      setHighUploadDone(true)
+      setHighModelName(files[0].name)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '高模加载失败'
+      setHighError(message)
+    } finally {
+      setHighLoading(false)
+    }
+  }, [])
 
   const handleStartEval = useCallback(() => {
     const type = lockAndGetType()
@@ -48,7 +104,6 @@ export function EvalWizardPage() {
 
   const handleBack = () => {
     if (step === 1) {
-      // Go back to usage selection
       useWizardStore.setState({ step: 0, usage: null })
     } else if (step === 2) {
       useWizardStore.setState({ step: 1 })
@@ -60,7 +115,13 @@ export function EvalWizardPage() {
     navigate('/')
   }
 
-  const canProceed = step === 0 ? !!usage : step === 1 ? !!animation : uploadDone
+  const canProceed = step === 0 ? !!usage : step === 1 ? !!animation : (uploadDone && highUploadDone)
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-surface-primary">
@@ -181,7 +242,6 @@ export function EvalWizardPage() {
                 ))}
               </div>
 
-              {/* Show current selection */}
               {usage && (
                 <div className="text-center text-[12px] text-text-tertiary">
                   已选用途：<span className="font-medium text-text-secondary">{MODEL_USAGE_LABELS[usage]}</span>
@@ -190,13 +250,13 @@ export function EvalWizardPage() {
             </div>
           )}
 
-          {/* Step 2: File upload */}
+          {/* Step 2: Upload low-poly + high-poly models */}
           {step === 2 && (
             <div className="space-y-6">
               <div className="text-center space-y-2">
                 <h2 className="text-[22px] font-bold tracking-[-0.02em]">上传模型文件</h2>
                 <p className="text-[14px] text-text-secondary max-w-md mx-auto">
-                  支持 OBJ（推荐，完整拓扑检测）和 FBX 格式。文件大小不超过 100MB。
+                  请上传待评测的低模和作为参考的高模，用于拓扑结构对比分析。
                 </p>
               </div>
 
@@ -213,26 +273,99 @@ export function EvalWizardPage() {
                 </div>
               )}
 
-              {/* Upload zone */}
-              {!uploadDone ? (
-                <ModelDropZone
-                  isLoading={isLoading}
-                  error={error}
-                  onFilesAccepted={handleFileAccepted}
-                  label="拖放模型文件到此处"
-                  description="支持 OBJ / FBX — 最大 100MB"
-                />
-              ) : (
-                <div className="rounded-2xl glass p-8 text-center space-y-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-success/10 mx-auto">
-                    <Upload className="h-6 w-6 text-success" />
+              {/* ── Low-poly upload ── */}
+              <div className="space-y-2">
+                <h3 className="text-[13px] font-semibold text-text-primary">
+                  📦 待评测模型（低模）
+                </h3>
+                <p className="text-[11px] text-text-tertiary">
+                  需要评测拓扑质量的低精度模型
+                </p>
+                {!uploadDone ? (
+                  <ModelDropZone
+                    isLoading={isLoading}
+                    error={error}
+                    onFilesAccepted={handleLowFileAccepted}
+                    label="拖放待评测的低模文件到此处"
+                    description="支持 OBJ / FBX — 最大 100MB"
+                  />
+                ) : (
+                  <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-emerald-200/50 p-4">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 shrink-0">
+                      <Upload className="h-4 w-4 text-emerald-500" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-medium text-text-primary truncate">
+                        {useModelStore.getState().currentModel?.name ?? '低模文件'}
+                      </p>
+                      <p className="text-[11px] text-text-tertiary">
+                        {useModelStore.getState().currentModel
+                          ? `${useModelStore.getState().currentModel!.format.toUpperCase()} · ${formatSize(useModelStore.getState().currentModel!.fileSize)}`
+                          : '已上传'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        useModelStore.getState().clearModel()
+                        setUploadDone(false)
+                      }}
+                      className="text-[11px] text-text-tertiary hover:text-danger transition-colors shrink-0"
+                    >
+                      移除
+                    </button>
                   </div>
-                  <div>
-                    <p className="text-[15px] font-medium text-text-primary">
-                      {useModelStore.getState().currentModel?.name ?? '模型文件'}
-                    </p>
-                    <p className="text-[13px] text-text-tertiary mt-1">文件已就绪，点击下方按钮开始评测</p>
+                )}
+              </div>
+
+              {/* ── High-poly upload ── */}
+              <div className="space-y-2">
+                <h3 className="text-[13px] font-semibold text-text-primary">
+                  🏆 参考模型（高模）
+                </h3>
+                <p className="text-[11px] text-text-tertiary">
+                  用于结构对比的高精度参考模型（可选）
+                </p>
+                {!highUploadDone ? (
+                  <ModelDropZone
+                    isLoading={highLoading}
+                    error={highError}
+                    onFilesAccepted={handleHighFileAccepted}
+                    label="拖放参考高模文件到此处"
+                    description="支持 OBJ / FBX — 用于同屏对比"
+                  />
+                ) : (
+                  <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-emerald-200/50 p-4">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 shrink-0">
+                      <Upload className="h-4 w-4 text-emerald-500" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-medium text-text-primary truncate">
+                        {highModelName}
+                      </p>
+                      <p className="text-[11px] text-text-tertiary">
+                        {useModelStore.getState().referenceModelInfo
+                          ? `${useModelStore.getState().referenceModelInfo!.format.toUpperCase()} · ${formatSize(useModelStore.getState().referenceModelInfo!.fileSize)}`
+                          : '已上传'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        useModelStore.getState().clearReferenceModel()
+                        setHighUploadDone(false)
+                        setHighModelName('')
+                      }}
+                      className="text-[11px] text-text-tertiary hover:text-danger transition-colors shrink-0"
+                    >
+                      移除
+                    </button>
                   </div>
+                )}
+              </div>
+
+              {/* Hint when only low is uploaded */}
+              {uploadDone && !highUploadDone && (
+                <div className="text-center text-[12px] text-amber-500">
+                  建议上传高模作为参考，以启用结构对比功能。也可直接开始评测。
                 </div>
               )}
             </div>
@@ -267,11 +400,7 @@ export function EvalWizardPage() {
                       : 'glass-btn text-text-tertiary cursor-not-allowed opacity-40'
                   }`}
                   onClick={() => {
-                    if (step === 0 && usage) {
-                      // Already moved by setUsage
-                    } else if (step === 1 && animation) {
-                      // Already moved by setAnimation
-                    }
+                    // setUsage/setAnimation already advances the step
                   }}
                 >
                   下一步
@@ -280,9 +409,9 @@ export function EvalWizardPage() {
               ) : (
                 <button
                   onClick={handleStartEval}
-                  disabled={!uploadDone || isLoading}
+                  disabled={!uploadDone || isLoading || highLoading}
                   className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-medium transition-all duration-300 ${
-                    uploadDone && !isLoading
+                    uploadDone && !isLoading && !highLoading
                       ? 'glass-btn-accent cursor-pointer'
                       : 'glass-btn text-text-tertiary cursor-not-allowed opacity-40'
                   }`}

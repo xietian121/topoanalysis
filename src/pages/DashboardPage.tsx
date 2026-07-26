@@ -1,19 +1,23 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, ArrowRight, Gamepad2, Palette, Bone, Box, BarChart4, ClipboardCheck, Search, Star, Clock, TrendingUp, AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { ModelCardThumbnail } from '@/components/viewer/ModelCardThumbnail'
 import { APP_TITLE, APP_DESCRIPTION } from '@/lib/constants'
 import { useEvalHistoryStore, type EvalHistoryRecord } from '@/stores/evalHistoryStore'
-import { getExampleRecords } from '@/data/example-models'
+import { useModelStore } from '@/stores/modelStore'
+import { useEvalStore } from '@/stores/evalStore'
+import { useLoadingStore } from '@/stores/loadingStore'
+import { getExampleRecords, getExampleDefs, type ExampleModelDef } from '@/data/example-models'
 import { MODEL_TYPE_LABELS, type EvaluationType } from '@/types/evaluation'
 
 type FilterUsage = 'all' | 'game' | 'general'
 type FilterAnimation = 'all' | 'static' | 'dynamic'
-type FilterStatus = 'all' | 'evaluated' | 'not_evaluated'
 
-function ModelCard({ record, isExample, onClick }: {
+function ModelCard({ record, isExample, modelUrl, onClick }: {
   record: EvalHistoryRecord
   isExample: boolean
+  modelUrl?: string
   onClick: () => void
 }) {
   const ratio = record.maxTotal > 0 ? record.total / record.maxTotal : 0
@@ -23,36 +27,65 @@ function ModelCard({ record, isExample, onClick }: {
   const usage = record.evaluationType?.startsWith('game-') ? 'game' : 'general'
   const animation = record.evaluationType?.endsWith('-dynamic') ? 'dynamic' : 'static'
 
+  // 根据模型类型选择不同的缩略图视觉
+  const isGame = usage === 'game'
+  const isDynamic = animation === 'dynamic'
+
   return (
     <button
       onClick={onClick}
       className="group text-left rounded-2xl glass card-elevate overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
     >
-      {/* Thumbnail placeholder */}
-      <div className="relative h-36 bg-black/[0.02] flex items-center justify-center overflow-hidden">
-        <div className={`flex h-14 w-14 items-center justify-center rounded-2xl transition-colors ${
-          isExample ? 'bg-accent/[0.06] text-accent' : 'bg-black/[0.04] text-text-tertiary'
-        }`}>
-          <Box className="h-6 w-6" />
-        </div>
+      {/* Thumbnail — 真实3D缩略图 或 类型图标占位 */}
+      <div className="relative h-36 overflow-hidden">
+        {modelUrl ? (
+          <ModelCardThumbnail modelUrl={modelUrl} />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-[#e8e8ed] to-[#d8d8dd] flex items-center justify-center">
+            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${
+              isGame
+                ? 'bg-gradient-to-br from-blue-400/20 to-blue-600/10 text-blue-500'
+                : 'bg-gradient-to-br from-purple-400/20 to-purple-600/10 text-purple-500'
+            }`}>
+              {isGame && isDynamic && <Bone className="h-6 w-6" />}
+              {isGame && !isDynamic && <Box className="h-6 w-6" />}
+              {!isGame && isDynamic && <Palette className="h-6 w-6" />}
+              {!isGame && !isDynamic && <Gamepad2 className="h-6 w-6" />}
+            </div>
+          </div>
+        )}
+
         {/* Status & type badges */}
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
           {isExample && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-accent/10 text-accent">官方示例</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-accent/10 text-accent">示例</span>
           )}
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-            usage === 'game' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
+            isGame ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
           }`}>
-            {usage === 'game' ? '游戏' : '通用'}
+            {isGame ? '游戏' : '通用'}
           </span>
         </div>
         <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-            animation === 'dynamic' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'
+            isDynamic ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'
           }`}>
-            {animation === 'dynamic' ? '可动' : '静态'}
+            {isDynamic ? '可动' : '静态'}
           </span>
         </div>
+
+        {/* 质量评级角标 */}
+        {record.evalStatus === 'completed' && record.total > 0 && (
+          <div className="absolute bottom-2.5 right-2.5">
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+              ratio >= 0.7 ? 'bg-emerald-100 text-emerald-700' :
+              ratio >= 0.4 ? 'bg-amber-100 text-amber-700' :
+              'bg-red-100 text-red-700'
+            }`}>
+              {gradeText}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Info */}
@@ -63,7 +96,7 @@ function ModelCard({ record, isExample, onClick }: {
         <div className="flex items-center gap-2 text-[11px] text-text-tertiary">
           <span>{record.modelFormat.toUpperCase()}</span>
           <span>·</span>
-          <span>{(record.modelFileSize / 1024).toFixed(0)} KB</span>
+          <span>{record.modelFileSize >= 1048576 ? `${(record.modelFileSize / 1048576).toFixed(1)} MB` : `${(record.modelFileSize / 1024).toFixed(0)} KB`}</span>
         </div>
 
         {/* Score bar */}
@@ -83,7 +116,7 @@ function ModelCard({ record, isExample, onClick }: {
             </div>
             <div className="flex justify-between text-[10px] text-text-tertiary">
               <span>{gradeText}</span>
-              <span>{Math.round(ratio * 100)}分</span>
+              <span>{record.total.toFixed(1)}分</span>
             </div>
           </div>
         )}
@@ -132,13 +165,11 @@ export function DashboardPage() {
   // Merge example models with user records
   const exampleRecords = useMemo(() => getExampleRecords(), [])
 
-  const [filterUsage, setFilterUsage] = useState<FilterUsage>('all')
-  const [filterAnimation, setFilterAnimation] = useState<FilterAnimation>('all')
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
+  const [userUsage, setUserUsage] = useState<FilterUsage>('all')
+  const [userAnimation, setUserAnimation] = useState<FilterAnimation>('all')
 
-  // Combined records for filtering
+  // All records (for stats only)
   const allRecords = useMemo(() => {
-    // Merge examples + user records, deduplicate by id
     const map = new Map<string, EvalHistoryRecord>()
     for (const r of exampleRecords) map.set(r.id, r)
     for (const r of allHistoryRecords) {
@@ -147,46 +178,142 @@ export function DashboardPage() {
     return Array.from(map.values())
   }, [exampleRecords, allHistoryRecords])
 
-  // Filter
-  const filteredRecords = useMemo(() => {
-    return allRecords.filter((r) => {
+  // Filter helpers
+  function filterRecords(records: EvalHistoryRecord[], usage: FilterUsage, animation: FilterAnimation) {
+    return records.filter((r) => {
       const rUsage = r.evaluationType?.startsWith('game-') ? 'game' : 'general'
       const rAnim = r.evaluationType?.endsWith('-dynamic') ? 'dynamic' : 'static'
-      const rEvaluated = r.evalStatus === 'completed'
-
-      if (filterUsage !== 'all' && rUsage !== filterUsage) return false
-      if (filterAnimation !== 'all' && rAnim !== filterAnimation) return false
-      if (filterStatus === 'evaluated' && !rEvaluated) return false
-      if (filterStatus === 'not_evaluated' && rEvaluated) return false
+      if (usage !== 'all' && rUsage !== usage) return false
+      if (animation !== 'all' && rAnim !== animation) return false
       return true
     })
-  }, [allRecords, filterUsage, filterAnimation, filterStatus])
+  }
+
+  const filteredUserModels = useMemo(
+    () => filterRecords(userRecords, userUsage, userAnimation),
+    [userRecords, userUsage, userAnimation],
+  )
 
   // Stats
   const stats = useMemo(() => {
     const evaluated = allRecords.filter((r) => r.evalStatus === 'completed' || r.total > 0)
     const totalEvaluated = evaluated.length
-    const avgScore = totalEvaluated > 0 ? Math.round(evaluated.reduce((s, r) => s + r.total, 0) / totalEvaluated) : 0
+    const avgScore = totalEvaluated > 0 ? Math.round(evaluated.reduce((s, r) => s + r.total, 0) / totalEvaluated * 10) / 10 : 0
     const excellentCount = evaluated.filter((r) => r.total >= 80).length
     const excellentRate = totalEvaluated > 0 ? Math.round((excellentCount / totalEvaluated) * 100) : 0
-
-    // Find top issue across all examples
     const topIssue = '三角面分布不合理'
-
     return { totalEvaluated, avgScore, excellentRate, topIssue }
   }, [allRecords])
 
-  // Separate examples and user models
-  const filteredExamples = filteredRecords.filter((r) => r.isExample)
-  const filteredUserModels = filteredRecords.filter((r) => !r.isExample)
+  const handleCardClick = useCallback(async (record: EvalHistoryRecord) => {
+    // 已评测的示例模型 → 加载模型后进入查看器
+    if (record.isExample && record.modelUrl) {
+      const { startLoading, setProgress, setError, finishLoading, abortController } = useLoadingStore.getState()
+      startLoading()
+      try {
+        const loadModelFromUrl = useModelStore.getState().loadModelFromUrl
+        const setEvaluationType = useEvalStore.getState().setEvaluationType
 
-  const handleCardClick = (record: EvalHistoryRecord) => {
+        // 设置评测标准
+        if (record.evaluationType) {
+          setEvaluationType(record.evaluationType)
+        }
+
+        // 加载低模（带进度）
+        await loadModelFromUrl(record.modelUrl, `${record.modelName}.obj`, {
+          onProgress: (progress, stage, text) => {
+            setProgress(progress, stage as 'download' | 'parse' | 'analyze' | 'init' | 'done', text)
+          },
+          signal: abortController?.signal,
+        })
+
+        // 尝试加载对应高模
+        const def = getExampleDefs().find((d) => d.id === record.id)
+        if (def?.referenceModelUrl) {
+          try {
+            const loadReferenceModel = useModelStore.getState().loadReferenceModel
+            const highRes = await fetch(def.referenceModelUrl)
+            if (highRes.ok) {
+              const highText = await highRes.text()
+              const highFile = new File([highText], 'high.obj', { type: 'application/octet-stream' })
+              await loadReferenceModel(highFile)
+            }
+          } catch {
+            // 高模加载失败不影响主流程
+            console.warn('参考高模加载失败，继续评测')
+          }
+        }
+
+        finishLoading()
+        navigate('/viewer/single')
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        console.error('示例模型加载失败:', err)
+        setError(err instanceof Error ? err.message : '模型加载失败')
+      }
+      return
+    }
+
+    // 我的模型 → 已评测去报告，未评测去向导
     if (record.evalStatus === 'completed' || record.total > 0) {
       navigate(`/report/${record.id}`)
     } else {
       navigate('/eval/wizard')
     }
-  }
+  }, [navigate])
+
+  // ── 示例模型按类型分组 ──
+  const allExampleDefs = useMemo(() => getExampleDefs(), [])
+  const typeOrder: EvaluationType[] = ['game-dynamic', 'game-static', 'general-dynamic', 'general-static']
+  const typeGroups = useMemo(() => {
+    return typeOrder.map((type) => {
+      const defs = allExampleDefs.filter((d) => d.type === type)
+      return {
+        type,
+        excellent: defs.find((d) => d.quality === 'excellent') ?? null,
+        problematic: defs.find((d) => d.quality === 'problematic') ?? null,
+      }
+    })
+  }, [allExampleDefs])
+
+  // 单独查看某个示例模型
+  const handleViewModel = useCallback(async (def: ExampleModelDef) => {
+    const { startLoading, setProgress, setError, finishLoading, abortController } = useLoadingStore.getState()
+    startLoading()
+    try {
+      const loadModelFromUrl = useModelStore.getState().loadModelFromUrl
+      const setEvaluationType = useEvalStore.getState().setEvaluationType
+      if (def.record.evaluationType) setEvaluationType(def.record.evaluationType)
+      await loadModelFromUrl(def.modelUrl, `${def.name}.obj`, {
+        onProgress: (progress, stage, text) => {
+          setProgress(progress, stage as 'download' | 'parse' | 'analyze' | 'init' | 'done', text)
+        },
+        signal: abortController?.signal,
+      })
+      if (def.referenceModelUrl) {
+        try {
+          const loadReferenceModel = useModelStore.getState().loadReferenceModel
+          const highRes = await fetch(def.referenceModelUrl)
+          if (highRes.ok) {
+            const highText = await highRes.text()
+            const highFile = new File([highText], 'high.obj', { type: 'application/octet-stream' })
+            await loadReferenceModel(highFile)
+          }
+        } catch { /* 高模加载失败不影响 */ }
+      }
+      finishLoading()
+      navigate('/viewer/single')
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      console.error('示例模型加载失败:', err)
+      setError(err instanceof Error ? err.message : '模型加载失败')
+    }
+  }, [navigate])
+
+  // 同屏对比查看
+  const handleCompareView = useCallback((type: EvaluationType) => {
+    navigate(`/tutorial/${type}`)
+  }, [navigate])
 
   return (
     <div className="h-full overflow-auto">
@@ -258,111 +385,152 @@ export function DashboardPage() {
               </button>
             ))}
           </div>
+
         </section>
 
-        {/* ===== Unified Filter Bar ===== */}
-        <section>
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-[12px] font-medium text-text-tertiary shrink-0">筛选：</span>
-            {/* Usage filter */}
-            <div className="flex items-center gap-1">
-              {([
-                { key: 'all' as const, label: '全部用途' },
-                { key: 'game' as const, label: '游戏模型' },
-                { key: 'general' as const, label: '非游戏模型' },
-              ]).map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setFilterUsage(key)}
-                  className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-200 ${
-                    filterUsage === key
-                      ? 'bg-black/[0.06] text-text-primary'
-                      : 'text-text-tertiary hover:bg-black/[0.04] hover:text-text-secondary'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="w-px h-4 bg-black/10" />
-            {/* Animation filter */}
-            <div className="flex items-center gap-1">
-              {([
-                { key: 'all' as const, label: '全部动效' },
-                { key: 'dynamic' as const, label: '可动模型' },
-                { key: 'static' as const, label: '静态模型' },
-              ]).map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setFilterAnimation(key)}
-                  className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-200 ${
-                    filterAnimation === key
-                      ? 'bg-black/[0.06] text-text-primary'
-                      : 'text-text-tertiary hover:bg-black/[0.04] hover:text-text-secondary'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="w-px h-4 bg-black/10" />
-            {/* Status filter */}
-            <div className="flex items-center gap-1">
-              {([
-                { key: 'all' as const, label: '全部状态' },
-                { key: 'evaluated' as const, label: '已评测' },
-                { key: 'not_evaluated' as const, label: '未评测' },
-              ]).map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setFilterStatus(key)}
-                  className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-200 ${
-                    filterStatus === key
-                      ? 'bg-black/[0.06] text-text-primary'
-                      : 'text-text-tertiary hover:bg-black/[0.04] hover:text-text-secondary'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
 
         {/* ===== Official Example Models ===== */}
         <section id="examples-section">
           <div className="flex items-baseline justify-between mb-5">
             <div>
               <h2 className="text-[20px] font-semibold tracking-[-0.01em] flex items-center gap-2">
-                📚 官方示例模型
+                📚 示例模型
               </h2>
               <p className="mt-1 text-[14px] text-text-secondary">
-                预置不同类型和质量的模型案例，查看完整评测报告与优化建议
+                每种类型提供优秀案例与问题案例，支持同屏对比查看
               </p>
             </div>
             <Badge variant="secondary" className="px-2.5 py-1 text-[12px]">
-              {filteredExamples.length} 个
+              {typeGroups.length} 类
             </Badge>
           </div>
 
-          {filteredExamples.length === 0 ? (
-            <div className="rounded-2xl glass p-12 text-center">
-              <Box className="h-8 w-8 mx-auto text-text-tertiary mb-3" />
-              <p className="text-[14px] text-text-secondary">没有匹配的示例模型</p>
-              <p className="text-[12px] text-text-tertiary mt-1">尝试调整筛选条件</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 gap-3">
-              {filteredExamples.map((record) => (
-                <ModelCard
-                  key={record.id}
-                  record={record}
-                  isExample={true}
-                  onClick={() => handleCardClick(record)}
-                />
-              ))}
-            </div>
-          )}
+          <div className="space-y-2.5">
+            {typeGroups.map(({ type, excellent, problematic }) => {
+              if (!excellent || !problematic) return null
+              const excScore = excellent.record.total
+              const probScore = problematic.record.total
+              const excRatio = excScore / excellent.record.maxTotal
+              const probRatio = probScore / problematic.record.maxTotal
+
+              return (
+                <div
+                  key={type}
+                  className="rounded-2xl glass overflow-hidden transition-all duration-300"
+                >
+                  {/* Body: 3 columns */}
+                  <div className="flex divide-x divide-black/[0.04]">
+                    {/* ── Column 1: Compare View ── */}
+                    <button
+                      onClick={() => handleCompareView(type)}
+                      className="flex-[4] p-3 group text-left hover:bg-black/[0.01] transition-colors min-w-0"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[12px] font-semibold text-text-primary">
+                          {MODEL_TYPE_LABELS[type]}
+                        </span>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">同高模</Badge>
+                      </div>
+
+                      {/* Score comparison */}
+                      <div className="space-y-2">
+                        {/* Dual score + bar */}
+                        <div className="flex items-center gap-3">
+                          <span className="mono text-[20px] font-bold text-red-500 leading-none">{probScore.toFixed(1)}</span>
+                          <div className="flex-1 h-1 rounded-full bg-black/[0.06] overflow-hidden flex justify-end">
+                            <div className="h-full rounded-full bg-red-400" style={{ width: `${probRatio * 100}%` }} />
+                          </div>
+                          <span className="text-[10px] font-bold text-text-tertiary shrink-0">VS</span>
+                          <div className="flex-1 h-1 rounded-full bg-black/[0.06] overflow-hidden">
+                            <div className="h-full rounded-full bg-emerald-400" style={{ width: `${excRatio * 100}%` }} />
+                          </div>
+                          <span className="mono text-[20px] font-bold text-emerald-500 leading-none">{excScore.toFixed(1)}</span>
+                        </div>
+
+                        {/* Dimension mini bars */}
+                        <div className="space-y-0.5">
+                          {excellent.record.dimensionScores.map((dim) => {
+                            const probDim = problematic.record.dimensionScores.find((d) => d.dimensionName === dim.dimensionName)
+                            const probPct = probDim ? probDim.score / probDim.maxScore : 0
+                            const excPct = dim.score / dim.maxScore
+                            return (
+                              <div key={dim.dimensionName} className="flex items-center gap-1">
+                                <span className="text-[10px] text-text-tertiary w-14 text-right shrink-0 truncate leading-tight">{dim.dimensionName}</span>
+                                <div className="flex-1 h-1 rounded-full bg-black/[0.04] overflow-hidden flex justify-end">
+                                  <div className="h-full rounded-full bg-red-300/60" style={{ width: `${probPct * 100}%` }} />
+                                </div>
+                                <span className="w-px h-2 bg-black/10 shrink-0" />
+                                <div className="flex-1 h-1 rounded-full bg-black/[0.04] overflow-hidden">
+                                  <div className="h-full rounded-full bg-emerald-300/60" style={{ width: `${excPct * 100}%` }} />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="mt-2.5">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-1.5 text-[12px] font-medium group-hover:shadow-md group-hover:shadow-accent/20 transition-all duration-200">
+                          同屏对比
+                          <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* ── Column 2: Excellent Case ── */}
+                    <button
+                      onClick={() => handleViewModel(excellent)}
+                      className="flex-[2] p-2.5 group text-left hover:bg-black/[0.01] transition-colors"
+                    >
+                      <div className="rounded-lg overflow-hidden border border-emerald-200/40">
+                        <div className="aspect-[3/2] bg-[#e8e8ed] relative">
+                          <ModelCardThumbnail modelUrl={excellent.modelUrl} />
+                        </div>
+                        <div className="px-2.5 py-2 flex items-center justify-between">
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-medium text-text-primary truncate">{excellent.name}</p>
+                            <span className={`mono text-[15px] font-bold ${
+                              excRatio < 0.4 ? 'text-red-500' : excRatio < 0.7 ? 'text-amber-500' : 'text-emerald-500'
+                            }`}>
+                              {excScore.toFixed(1)}
+                            </span>
+                          </div>
+                          <span className="inline-flex items-center gap-0.5 text-[10px] text-accent font-medium shrink-0 ml-2">
+                            查看 <ArrowRight className="h-3 w-3" />
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* ── Column 3: Problem Case ── */}
+                    <button
+                      onClick={() => handleViewModel(problematic)}
+                      className="flex-[2] p-2.5 group text-left hover:bg-black/[0.01] transition-colors"
+                    >
+                      <div className="rounded-lg overflow-hidden border border-red-200/40">
+                        <div className="aspect-[3/2] bg-[#e8e8ed] relative">
+                          <ModelCardThumbnail modelUrl={problematic.modelUrl} />
+                        </div>
+                        <div className="px-2.5 py-2 flex items-center justify-between">
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-medium text-text-primary truncate">{problematic.name}</p>
+                            <span className={`mono text-[15px] font-bold ${
+                              probRatio < 0.4 ? 'text-red-500' : probRatio < 0.7 ? 'text-amber-500' : 'text-emerald-500'
+                            }`}>
+                              {probScore.toFixed(1)}
+                            </span>
+                          </div>
+                          <span className="inline-flex items-center gap-0.5 text-[10px] text-accent font-medium shrink-0 ml-2">
+                            查看 <ArrowRight className="h-3 w-3" />
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </section>
 
         {/* ===== My Models ===== */}
@@ -379,6 +547,50 @@ export function DashboardPage() {
             <Badge variant="secondary" className="px-2.5 py-1 text-[12px]">
               {userRecords.length} 个
             </Badge>
+          </div>
+
+          {/* User models filter bar */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-[11px] font-medium text-text-tertiary shrink-0">筛选：</span>
+            <div className="flex items-center gap-1">
+              {([
+                { key: 'all' as const, label: '全部用途' },
+                { key: 'game' as const, label: '游戏模型' },
+                { key: 'general' as const, label: '非游戏模型' },
+              ]).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setUserUsage(key)}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all duration-200 ${
+                    userUsage === key
+                      ? 'bg-black/[0.06] text-text-primary'
+                      : 'text-text-tertiary hover:bg-black/[0.04] hover:text-text-secondary'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="text-[11px] text-text-tertiary">·</span>
+            <div className="flex items-center gap-1">
+              {([
+                { key: 'all' as const, label: '全部类型' },
+                { key: 'dynamic' as const, label: '可动模型' },
+                { key: 'static' as const, label: '静态模型' },
+              ]).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setUserAnimation(key)}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all duration-200 ${
+                    userAnimation === key
+                      ? 'bg-black/[0.06] text-text-primary'
+                      : 'text-text-tertiary hover:bg-black/[0.04] hover:text-text-secondary'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {userRecords.length === 0 ? (

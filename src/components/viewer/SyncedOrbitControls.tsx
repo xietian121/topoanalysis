@@ -82,6 +82,13 @@ export function SyncedOrbitControls({ side }: SyncedOrbitControlsProps) {
       makeDefault
       enableDamping
       dampingFactor={0.08}
+      enablePan
+      screenSpacePanning
+      mouseButtons={{
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.PAN,
+        RIGHT: THREE.MOUSE.DOLLY,
+      }}
       minDistance={0.5}
       maxDistance={50}
       target={[0, 0, 0]}

@@ -6,7 +6,7 @@ import type { FlattenedCriterion } from '@/stores/evalFlowStore'
 // ── Helpers ──
 
 function getAutoData(criterionId: string, report: TopologyReport): string | null {
-  const { faceStats, nonManifold, overlapping, poleStats } = report
+  const { faceStats, nonManifold, overlapping, boundary, poleStats } = report
   switch (criterionId) {
     case 'quad-tri-ratio': {
       let tier = ''
@@ -41,6 +41,9 @@ function getAutoData(criterionId: string, report: TopologyReport): string | null
       return report.edgeLoops
         ? `检测到 ${report.edgeLoops.loops.length} 条闭合循环线（3D 视图绿色线段）。请检查各部位循环线是否完整连续`
         : '未检测到闭合循环线，可能存在布线断裂'
+    case 'boundary-holes':
+      if (boundary.count === 0) return '未检测到破洞边，模型完全水密'
+      return `检测到 ${boundary.count} 条边界边（破洞），模型非水密。请检查是否存在未闭合的面片区域`
     default:
       return null
   }
@@ -51,7 +54,7 @@ function getRecommendation(
   report: TopologyReport | null,
 ): string | null {
   if (!report) return null
-  const { faceStats, nonManifold, overlapping, poleStats } = report
+  const { faceStats, nonManifold, overlapping, boundary, poleStats } = report
 
   switch (criterion.id) {
     case 'quad-tri-ratio': {
@@ -64,22 +67,27 @@ function getRecommendation(
       if (autoScore >= criterion.maxScore) {
         return `三角面占比 ${triRatio}%，低于 ${thresholdStr} 阈值，满分通过`
       }
-      return `三角面占比 ${triRatio}%，超出 ${thresholdStr} 阈值，推荐 ${autoScore}/${criterion.maxScore} 分`
+      return `三角面占比 ${triRatio}%，超出 ${thresholdStr} 阈值，推荐 ${autoScore.toFixed(1)}/${criterion.maxScore} 分`
     }
     case 'ngon-count': {
       if (faceStats.ngonCount === 0) return '未检测到 N-gon，满分通过'
       const autoScore = computeAutoScore(criterion, report)
-      return `${faceStats.ngonCount} 个 N-gon，每 1 个扣 1 分，推荐 ${autoScore}/${criterion.maxScore} 分`
+      return `${faceStats.ngonCount} 个 N-gon，每 1 个扣 1 分，推荐 ${autoScore.toFixed(1)}/${criterion.maxScore} 分`
     }
     case 'non-manifold': {
       if (nonManifold.count === 0) return '未检测到非流形边，满分通过'
       const autoScore = computeAutoScore(criterion, report)
-      return `${nonManifold.count} 条非流形边，每条扣 0.5 分，推荐 ${autoScore}/${criterion.maxScore} 分`
+      return `${nonManifold.count} 条非流形边，每条扣 0.5 分，推荐 ${autoScore.toFixed(1)}/${criterion.maxScore} 分`
     }
     case 'overlapping': {
       if (overlapping.count === 0) return '未检测到重叠面，满分通过'
       const autoScore = computeAutoScore(criterion, report)
-      return `${overlapping.count} 组重叠面，每组扣 0.5 分，推荐 ${autoScore}/${criterion.maxScore} 分`
+      return `${overlapping.count} 组重叠面，每组扣 0.5 分，推荐 ${autoScore.toFixed(1)}/${criterion.maxScore} 分`
+    }
+    case 'boundary-holes': {
+      if (boundary.count === 0) return '未检测到破洞边，满分通过'
+      const autoScore = computeAutoScore(criterion, report)
+      return `${boundary.count} 条边界边（破洞），每条扣 0.5 分，推荐 ${autoScore.toFixed(1)}/${criterion.maxScore} 分`
     }
     case 'tri-distribution': {
       if (faceStats.triCount === 0) return '未检测到三角面，建议评分 10'

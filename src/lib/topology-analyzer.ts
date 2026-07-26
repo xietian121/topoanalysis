@@ -29,6 +29,18 @@ export interface OverlappingResult {
   pairs: [number, number][] // [faceA_idx, faceB_idx] — indices into original OBJ faces
 }
 
+export interface BoundaryEdge {
+  /** Endpoint A position */
+  a: [number, number, number]
+  /** Endpoint B position */
+  b: [number, number, number]
+}
+
+export interface BoundaryResult {
+  count: number
+  edges: BoundaryEdge[]
+}
+
 export interface PoleStats {
   /** Number of vertices with valence >= 6 */
   count: number
@@ -58,6 +70,7 @@ export interface TopologyReport {
   faceStats: FaceStats
   nonManifold: NonManifoldResult
   overlapping: OverlappingResult
+  boundary: BoundaryResult
   poleStats: PoleStats
   vertexCount: number
   density?: DensityData
@@ -311,6 +324,71 @@ function detectOverlappingFromGeometry(model: THREE.Group): OverlappingResult {
   }
 
   return { count: overlapping.length, pairs: overlapping }
+}
+
+// ---------------------------------------------------------------------------
+// Boundary edge (hole) detection — edges shared by only 1 face
+// ---------------------------------------------------------------------------
+
+/**
+ * Detect boundary edges (holes) in the mesh.
+ * A boundary edge belongs to exactly one face — the model is not watertight at that edge.
+ * These manifest as visible holes, gaps, or open seams in the model.
+ */
+export function detectBoundaryEdges(model: THREE.Group): BoundaryResult {
+  // Map: "keyA|keyB" → face count
+  const edgeMap = new Map<string, { count: number; posA: [number, number, number]; posB: [number, number, number] }>()
+
+  model.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    const geo = child.geometry
+    if (!(geo instanceof THREE.BufferGeometry)) return
+
+    const pos = geo.getAttribute('position') as THREE.BufferAttribute
+    if (!pos) return
+    const idx = geo.getIndex()
+
+    const addEdgeByPos = (vi: number, vj: number) => {
+      const x0 = pos.getX(vi), y0 = pos.getY(vi), z0 = pos.getZ(vi)
+      const x1 = pos.getX(vj), y1 = pos.getY(vj), z1 = pos.getZ(vj)
+      const ki = posKey(x0, y0, z0)
+      const kj = posKey(x1, y1, z1)
+      if (ki === kj) return
+      const eKey = ki < kj ? `${ki}|${kj}` : `${kj}|${ki}`
+      const existing = edgeMap.get(eKey)
+      if (existing) {
+        existing.count++
+      } else {
+        edgeMap.set(eKey, { count: 1, posA: [x0, y0, z0], posB: [x1, y1, z1] })
+      }
+    }
+
+    const count = pos.count
+    if (idx) {
+      const arr = idx.array
+      for (let i = 0; i < idx.count; i += 3) {
+        addEdgeByPos(arr[i], arr[i + 1])
+        addEdgeByPos(arr[i + 1], arr[i + 2])
+        addEdgeByPos(arr[i + 2], arr[i])
+      }
+    } else {
+      for (let i = 0; i < count; i += 3) {
+        addEdgeByPos(i, i + 1)
+        addEdgeByPos(i + 1, i + 2)
+        addEdgeByPos(i + 2, i)
+      }
+    }
+  })
+
+  // Collect edges shared by exactly 1 face → boundary (hole)
+  const boundaryEdges: BoundaryEdge[] = []
+  for (const [, data] of edgeMap) {
+    if (data.count === 1) {
+      boundaryEdges.push({ a: data.posA, b: data.posB })
+    }
+  }
+
+  return { count: boundaryEdges.length, edges: boundaryEdges }
 }
 
 // ---------------------------------------------------------------------------
@@ -707,12 +785,51 @@ export function detectEdgeLoops(faceData: OBJFaceData | null): EdgeLoopResult | 
 // Full analysis
 // ---------------------------------------------------------------------------
 
-export function analyzeTopology(model: THREE.Group, faceData: OBJFaceData | null): TopologyReport {
+export type TopologyProgressCallback = (step: number, total: number, label: string) => void
+
+const ANALYSIS_STEPS = [
+  { label: '面型分析', fn: 'faceStats' },
+  { label: '非流形检测', fn: 'nonManifold' },
+  { label: '重叠面检测', fn: 'overlapping' },
+  { label: '破洞检测', fn: 'boundary' },
+  { label: '极点分析', fn: 'poleStats' },
+  { label: '密度分布', fn: 'density' },
+  { label: '循环线检测', fn: 'edgeLoops' },
+] as const
+
+export function analyzeTopology(
+  model: THREE.Group,
+  faceData: OBJFaceData | null,
+  onProgress?: TopologyProgressCallback,
+): TopologyReport {
+  const totalSteps = ANALYSIS_STEPS.length
+
+  // Step 1: Face types
+  onProgress?.(1, totalSteps, ANALYSIS_STEPS[0].label)
   const faceStats = analyzeFaceTypes(faceData, model)
+
+  // Step 2: Non-manifold
+  onProgress?.(2, totalSteps, ANALYSIS_STEPS[1].label)
   const nonManifold = detectNonManifold(model)
+
+  // Step 3: Overlapping
+  onProgress?.(3, totalSteps, ANALYSIS_STEPS[2].label)
   const overlapping = detectOverlapping(model, faceData)
+
+  // Step 4: Boundary
+  onProgress?.(4, totalSteps, ANALYSIS_STEPS[3].label)
+  const boundary = detectBoundaryEdges(model)
+
+  // Step 5: Poles
+  onProgress?.(5, totalSteps, ANALYSIS_STEPS[4].label)
   const poleStats = detectPoles(model, faceData)
+
+  // Step 6: Density
+  onProgress?.(6, totalSteps, ANALYSIS_STEPS[5].label)
   const density = detectDensity(model)
+
+  // Step 7: Edge loops
+  onProgress?.(7, totalSteps, ANALYSIS_STEPS[6].label)
   const edgeLoops = detectEdgeLoops(faceData)
 
   let vertexCount = 0
@@ -725,10 +842,10 @@ export function analyzeTopology(model: THREE.Group, faceData: OBJFaceData | null
   console.log(
     `[TopoEval] 拓扑分析: ${faceStats.totalFaces}面 ` +
     `(Q:${faceStats.quadCount} T:${faceStats.triCount} N:${faceStats.ngonCount}) ` +
-    `非流形:${nonManifold.count} 重叠:${overlapping.count} ` +
+    `非流形:${nonManifold.count} 重叠:${overlapping.count} 边界边:${boundary.count} ` +
     `极点(≥6边):${poleStats.count} ` +
     `循环线:${edgeLoops?.loops.length ?? 0}`,
   )
 
-  return { faceStats, nonManifold, overlapping, poleStats, vertexCount, density, edgeLoops }
+  return { faceStats, nonManifold, overlapping, boundary, poleStats, vertexCount, density, edgeLoops }
 }

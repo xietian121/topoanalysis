@@ -28,7 +28,7 @@ export interface EvalHistoryRecord {
   reviewScores?: Record<string, number>
 
   // ===== Phase 2 新增字段 =====
-  /** 是否为官方示例模型 */
+  /** 是否为示例模型 */
   isExample?: boolean
   /** 模型缩略图 URL */
   thumbnailUrl?: string
@@ -40,6 +40,8 @@ export interface EvalHistoryRecord {
   suggestions?: EvaluationSuggestions
   /** 评测状态 */
   evalStatus?: 'completed' | 'in_progress' | 'not_started'
+  /** OBJ 模型文本内容（用于报告页重新加载模型） */
+  modelText?: string
 }
 
 interface EvalHistoryStore {

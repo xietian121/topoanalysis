@@ -26,7 +26,7 @@ export function generateSuggestions(input: SuggestionInput): EvaluationSuggestio
 
   // ===== 自动检测项分析 =====
   if (autoReport) {
-    const { faceStats, nonManifold, overlapping } = autoReport
+    const { faceStats, nonManifold, overlapping, boundary } = autoReport
 
     // N-gon
     if (faceStats.ngonCount > 0) {
@@ -47,6 +47,18 @@ export function generateSuggestions(input: SuggestionInput): EvaluationSuggestio
         why: '非流形边是严重拓扑错误，导致法线计算异常、渲染错误及物理碰撞失效。' + (isAnimation ? '骨骼驱动变形时会导致面片撕裂或穿透。' : ''),
         howToFix: '使用3D软件的非流形检测工具定位所有问题边，通过焊接顶点、删除冗余面或重建局部拓扑来修复。',
         relatedCriterionId: 'non-manifold',
+      })
+    }
+
+    // Boundary edges (holes)
+    if (boundary.count > 0) {
+      const severity = boundary.count > 10 ? '严重' : '少量'
+      ;(boundary.count > 10 ? critical : warning).push({
+        title: `检测到 ${boundary.count} 条边界边（破洞）`,
+        description: `模型存在 ${boundary.count} 条仅连接一个面的边界边，${severity}影响网格完整性。`,
+        why: '破洞面意味着模型非水密，会导致渲染漏光、阴影异常、3D打印失败及物理碰撞穿透。' + (isAnimation ? '骨骼动画中破洞会因蒙皮变形进一步扩大，产生视觉撕裂。' : ''),
+        howToFix: '使用3D软件的封洞工具（Cap Holes / Fill Holes）填补破洞，或手动创建面片闭合开放区域。优先修复视觉可见和变形区域附近的破洞。',
+        relatedCriterionId: 'boundary-holes',
       })
     }
 
@@ -111,10 +123,11 @@ export function generateSuggestions(input: SuggestionInput): EvaluationSuggestio
 
   // ===== 特别检查 =====
   if (autoReport && autoReport.faceStats.ngonCount === 0 &&
-      autoReport.nonManifold.count === 0 && autoReport.overlapping.count === 0) {
+      autoReport.nonManifold.count === 0 && autoReport.overlapping.count === 0 &&
+      autoReport.boundary.count === 0) {
     good.unshift({
       title: '零拓扑错误',
-      description: '模型无非流形边、无重叠面、无N-gon面，基础拓扑完全干净。',
+      description: '模型无非流形边、无重叠面、无破洞、无N-gon面，基础拓扑完全干净。',
       why: '零拓扑错误是专业3D资产的基本标准，体现了建模的细致程度。',
       howToFix: '',
       relatedCriterionId: 'non-manifold',
@@ -163,7 +176,7 @@ function getDimensionWhy(dimId: string, isAnimation: boolean): string {
     case 'face-quality':
       return '面型质量直接影响模型的渲染正确性、可编辑性和引擎兼容性。四边面为主的拓扑是行业标准。'
     case 'face-errors':
-      return '面错误（非流形边、重叠面）是致命缺陷，会导致渲染异常、碰撞检测失败和3D打印错误。'
+      return '面错误（非流形边、重叠面、破洞面）是致命缺陷，会导致渲染异常、碰撞检测失败和3D打印错误。'
     case 'edge-flow':
       return '布线合理性决定了模型的UV展开质量、细分结果和视觉效果。好的布线是高质量3D资产的基础。'
     case 'animation-friendly':

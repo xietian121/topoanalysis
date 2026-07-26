@@ -8,6 +8,8 @@ import { ComparePage } from '@/pages/ComparePage'
 import { StandardsPage } from '@/pages/StandardsPage'
 import { HistoryPage } from '@/pages/HistoryPage'
 import { ReportPage } from '@/pages/ReportPage'
+import { CompareReportPage } from '@/pages/CompareReportPage'
+import { TutorialPage } from '@/pages/TutorialPage'
 import { ModelComparePage } from '@/pages/ModelComparePage'
 import { AnalyticsPage } from '@/pages/AnalyticsPage'
 
@@ -28,8 +30,12 @@ export const router = createBrowserRouter([
 
       // Phase 2: Report, Compare, Analytics
       { path: 'report/:id', element: <ReportPage /> },
+      { path: 'compare/report/:id1/:id2', element: <CompareReportPage /> },
       { path: 'compare', element: <ModelComparePage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
+
+      // Phase 3: Teaching comparison
+      { path: 'tutorial/:type', element: <TutorialPage /> },
 
       // Standards (updated for Phase 2)
       { path: 'standards', element: <StandardsPage /> },

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { roundScore } from './evalStore'
 
 export interface FlattenedCriterion {
   id: string
@@ -45,7 +46,7 @@ export const useEvalFlowStore = create<EvalFlowStore>()((set, get) => ({
 
   setScore: (criterionId, score) =>
     set((s) => ({
-      reviewScores: { ...s.reviewScores, [criterionId]: Math.round(score) },
+      reviewScores: { ...s.reviewScores, [criterionId]: roundScore(score) },
     })),
 
   finishFlow: () => set({ isActive: false }),
@@ -84,16 +85,16 @@ export function computeFlowTotal(
 
   for (const crit of criteria) {
     const raw = reviewScores[crit.id] ?? 0
-    const mapped = Math.round((raw / 10) * crit.maxScore)
+    const mapped = roundScore((raw / 10) * crit.maxScore)
     total += mapped
     maxTotal += crit.maxScore
 
     if (!dimMap[crit.dimensionName]) {
       dimMap[crit.dimensionName] = { score: 0, maxScore: 0 }
     }
-    dimMap[crit.dimensionName].score += mapped
+    dimMap[crit.dimensionName].score = roundScore(dimMap[crit.dimensionName].score + mapped)
     dimMap[crit.dimensionName].maxScore += crit.maxScore
   }
 
-  return { total, maxTotal, dimensionScores: dimMap }
+  return { total: roundScore(total), maxTotal, dimensionScores: dimMap }
 }

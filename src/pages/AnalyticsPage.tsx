@@ -42,7 +42,7 @@ export function AnalyticsPage() {
     const total = filteredRecords.length
     if (total === 0) return null
 
-    const avgScore = Math.round(filteredRecords.reduce((s, r) => s + r.total, 0) / total)
+    const avgScore = Math.round(filteredRecords.reduce((s, r) => s + r.total, 0) / total * 10) / 10
     const excellentCount = filteredRecords.filter(r => r.total >= 80).length
     const excellentRate = Math.round((excellentCount / total) * 100)
 
@@ -81,8 +81,8 @@ export function AnalyticsPage() {
     }
     const dimensionAverages = Array.from(dimMap.entries()).map(([name, data]) => ({
       dimensionName: name,
-      avgScore: Math.round(data.total / data.count),
-      maxScore: Math.round(data.maxTotal / data.count),
+      avgScore: Math.round(data.total / data.count * 10) / 10,
+      maxScore: Math.round(data.maxTotal / data.count * 10) / 10,
     }))
 
     // Frequent issues (simulated based on dimension scores)
@@ -113,8 +113,8 @@ export function AnalyticsPage() {
       }
       return Array.from(map.entries()).map(([name, data]) => ({
         dimensionName: name,
-        avgScore: data.count > 0 ? Math.round(data.total / data.count) : 0,
-        maxScore: data.count > 0 ? Math.round(data.maxTotal / data.count) : 1,
+        avgScore: data.count > 0 ? Math.round(data.total / data.count * 10) / 10 : 0,
+        maxScore: data.count > 0 ? Math.round(data.maxTotal / data.count * 10) / 10 : 1,
       }))
     }
 
@@ -347,7 +347,7 @@ export function AnalyticsPage() {
                         <div key={d.dimensionName} className="flex items-center justify-between text-[12px]">
                           <span className="text-text-secondary">{d.dimensionName}</span>
                           <span className={`mono ${ratio < 0.6 ? 'text-red-500' : ratio < 0.8 ? 'text-amber-500' : 'text-emerald-500'}`}>
-                            {d.avgScore}/{d.maxScore} ({Math.round(ratio * 100)}%)
+                            {d.avgScore.toFixed(1)}/{d.maxScore.toFixed(1)} ({Math.round(ratio * 100)}%)
                           </span>
                         </div>
                       )

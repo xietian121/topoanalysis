@@ -58,7 +58,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
       {
         id: 'face-errors',
         name: '面错误',
-        weight: 25,
+        weight: 30,
         criteria: [
           {
             id: 'non-manifold',
@@ -78,19 +78,36 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             method: 'auto',
             scoringRule: '每出现 1 组重叠面扣除 0.5 分，扣完为止',
           },
+          {
+            id: 'boundary-holes',
+            name: '破洞面',
+            description:
+              '自动检测网格中的边界边（破洞边缘）。边界边是仅被一个面使用的边，意味着模型在该边处存在破洞或开放缝隙——即网格不封闭（非水密）。破洞会导致渲染漏光、阴影异常、3D 打印失败、布尔运算出错及物理碰撞穿透等严重问题。每条边界边扣除 0.5 分，扣完为止。',
+            maxScore: 5,
+            method: 'auto',
+            scoringRule: '每出现 1 条边界边（破洞边）扣除 0.5 分，扣完为止',
+          },
         ],
       },
       {
         id: 'edge-flow',
         name: '布线合理性',
-        weight: 45,
+        weight: 40,
         criteria: [
           {
             id: 'structure',
             name: '结构跟随性',
             description:
               '评估模型边线走向是否贴合物体结构轮廓。顶点应落在关键轮廓转折处，边线流向应与物体形体走向一致。若结构出入较大——如关键特征处布线偏离轮廓、转折处缺乏边线支撑——则得分不超过 6 分（6 分为阈值线）。',
-            maxScore: 18,
+            maxScore: 13,
+            method: 'manual',
+          },
+          {
+            id: 'flat-optimization',
+            name: '平坦区域面数控制',
+            description:
+              '评估模型在平坦、无细节区域是否合理减少了面数。优秀的低模应在保证结构轮廓的前提下，对平面区域（如墙面、桌面、大面积平坦表面）进行适度减面，避免在无特征区域浪费面数资源。面数应集中分配在曲面转折、细节特征处，而非均匀摊平到平坦区域。',
+            maxScore: 7,
             method: 'manual',
           },
           {
@@ -98,7 +115,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             name: '密度分布合理性',
             description:
               '评估模型面片密度分配是否合理。重要细节区域（形体转折处、特征点、视觉焦点）应有较高面密度；平坦、非变形区域应有较低面密度。资源应优先倾斜关键部位，而非均匀摊平。',
-            maxScore: 14,
+            maxScore: 10,
             method: 'manual',
           },
           {
@@ -106,7 +123,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             name: '循环线完整性',
             description:
               '评估模型环形边回路是否完整、连续。各结构部位应具备必要的循环线支撑——尤其是需要 UV 接缝分割和骨骼变形缓冲的区域必须形成完整边回路。断裂、缺失的循环线将导致 UV 展开困难和动画变形异常。',
-            maxScore: 13,
+            maxScore: 10,
             method: 'manual',
           },
         ],
@@ -164,7 +181,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
       {
         id: 'face-errors',
         name: '面错误',
-        weight: 20,
+        weight: 25,
         criteria: [
           {
             id: 'non-manifold',
@@ -184,19 +201,36 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             method: 'auto',
             scoringRule: '每出现 1 组重叠面扣除 0.5 分，扣完为止',
           },
+          {
+            id: 'boundary-holes',
+            name: '破洞面',
+            description:
+              '自动检测网格中的边界边（破洞边缘）。可动模型的破洞在骨骼动画中会因为蒙皮变形而进一步扩大，导致严重的视觉撕裂和穿透。每条边界边扣除 0.5 分，扣完为止。',
+            maxScore: 5,
+            method: 'auto',
+            scoringRule: '每出现 1 条边界边（破洞边）扣除 0.5 分，扣完为止',
+          },
         ],
       },
       {
         id: 'edge-flow',
         name: '布线合理性',
-        weight: 25,
+        weight: 20,
         criteria: [
           {
             id: 'structure',
             name: '结构跟随性',
             description:
               '评估模型边线沿结构轮廓分布情况。高模的结构特征应在低模的边线中得到保留——顶点应落在轮廓转折处，边线流向应与形体走向一致。若偏差较大则得分不超过 6 分。',
-            maxScore: 10,
+            maxScore: 7,
+            method: 'manual',
+          },
+          {
+            id: 'flat-optimization',
+            name: '平坦区域面数控制',
+            description:
+              '评估模型在平坦、无细节区域是否合理减少了面数。可动模型的平坦区域（如铠甲平面、武器平面等非变形区域）应适度减面，将面数预算留给关节活动区域。避免在不变形的平坦表面浪费面数。',
+            maxScore: 3,
             method: 'manual',
           },
           {
@@ -204,7 +238,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             name: '密度分布合理性',
             description:
               '评估模型面片密度分配。重要区域（面部、手部等视觉焦点和可动部位）应分配更多面数；平坦静态区域可适当降低密度。资源应优先倾斜关键部位。',
-            maxScore: 8,
+            maxScore: 6,
             method: 'manual',
           },
           {
@@ -212,7 +246,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             name: '循环线完整性',
             description:
               '评估环形边回路完整性。各部位应有完整且必要的循环线——尤其是 UV 接缝处和可动关节周围必须形成完整边回路，以保证 UV 展开和骨骼蒙皮质量。',
-            maxScore: 7,
+            maxScore: 4,
             method: 'manual',
           },
         ],
@@ -293,7 +327,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
       {
         id: 'face-errors',
         name: '面错误',
-        weight: 25,
+        weight: 30,
         criteria: [
           {
             id: 'non-manifold',
@@ -313,19 +347,36 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             method: 'auto',
             scoringRule: '每出现 1 组重叠面扣除 0.5 分，扣完为止',
           },
+          {
+            id: 'boundary-holes',
+            name: '破洞面',
+            description:
+              '自动检测网格中的边界边（破洞边缘）。通用模型（尤其用于3D打印、建筑可视化等场景）必须保证模型水密性。破洞会导致打印失败、渲染漏光和物理模拟异常。每条边界边扣除 0.5 分，扣完为止。',
+            maxScore: 5,
+            method: 'auto',
+            scoringRule: '每出现 1 条边界边（破洞边）扣除 0.5 分，扣完为止',
+          },
         ],
       },
       {
         id: 'edge-flow',
         name: '布线合理性',
-        weight: 40,
+        weight: 35,
         criteria: [
           {
             id: 'structure',
             name: '结构跟随性',
             description:
               '评估模型边线走向是否贴合物体结构轮廓。通用模型更注重造型准确度——顶点应落在关键轮廓转折处，边线流向应与物体形体走向一致。若偏差较大则得分不超过 6 分。',
-            maxScore: 16,
+            maxScore: 11,
+            method: 'manual',
+          },
+          {
+            id: 'flat-optimization',
+            name: '平坦区域面数控制',
+            description:
+              '评估模型在平坦、无细节区域是否合理减少了面数。通用模型的平坦区域（如建筑墙面、展示台面、大面积平面）应主动减面，将面数预算留给曲面和细节区域。避免在无特征的平坦表面保留过多不必要的面数。',
+            maxScore: 6,
             method: 'manual',
           },
           {
@@ -333,7 +384,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             name: '密度分布合理性',
             description:
               '评估模型面片密度分配是否合理。细节区域应有较高面密度，平坦区域应适当减面。通用模型允许更灵活的面数分配策略。',
-            maxScore: 13,
+            maxScore: 10,
             method: 'manual',
           },
           {
@@ -341,7 +392,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             name: '循环线完整性',
             description:
               '评估模型环形边回路是否完整、连续。良好的循环线能保证 UV 展开质量和平滑的细分结果，是通用3D资产的重要质量指标。',
-            maxScore: 11,
+            maxScore: 8,
             method: 'manual',
           },
         ],
@@ -399,7 +450,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
       {
         id: 'face-errors',
         name: '面错误',
-        weight: 20,
+        weight: 25,
         criteria: [
           {
             id: 'non-manifold',
@@ -419,19 +470,36 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             method: 'auto',
             scoringRule: '每出现 1 组重叠面扣除 0.5 分，扣完为止',
           },
+          {
+            id: 'boundary-holes',
+            name: '破洞面',
+            description:
+              '自动检测网格中的边界边（破洞边缘）。可动模型的破洞在骨骼动画中会因为蒙皮变形而进一步扩大，导致严重的视觉撕裂和穿透。每条边界边扣除 0.5 分，扣完为止。',
+            maxScore: 5,
+            method: 'auto',
+            scoringRule: '每出现 1 条边界边（破洞边）扣除 0.5 分，扣完为止',
+          },
         ],
       },
       {
         id: 'edge-flow',
         name: '布线合理性',
-        weight: 30,
+        weight: 25,
         criteria: [
           {
             id: 'structure',
             name: '结构跟随性',
             description:
               '评估模型边线沿结构轮廓分布情况。结构特征应在边线中得到保留，边线流向应与形体走向一致。通用模型允许一定的布线自由度，但不能明显偏离关键轮廓。',
-            maxScore: 12,
+            maxScore: 8,
+            method: 'manual',
+          },
+          {
+            id: 'flat-optimization',
+            name: '平坦区域面数控制',
+            description:
+              '评估模型在平坦、无细节区域是否合理减少了面数。通用可动模型的平坦区域（如衣物平面、道具表面等非变形区域）应适度减面，将面数预算留给曲面细节和关节活动区域。',
+            maxScore: 4,
             method: 'manual',
           },
           {
@@ -439,7 +507,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             name: '密度分布合理性',
             description:
               '评估模型面片密度分配。重要区域（面部、手部等视觉焦点和可动部位）应分配更多面数；平坦静态区域可适当降低密度。通用模型的面数预算更灵活。',
-            maxScore: 10,
+            maxScore: 7,
             method: 'manual',
           },
           {
@@ -447,7 +515,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
             name: '循环线完整性',
             description:
               '评估环形边回路完整性。各部位应有完整且必要的循环线——尤其是 UV 接缝处和可动关节周围必须形成完整边回路。',
-            maxScore: 8,
+            maxScore: 6,
             method: 'manual',
           },
         ],
@@ -526,7 +594,7 @@ export const STANDARDS_META: StandardMeta[] = [
     animation: '静态',
     description: '用于游戏引擎的静态场景、道具、建筑等不参与骨骼动画的模型。对面错误容忍度极低，线框效率要求高。',
     dimensionCount: 3,
-    criterionCount: 9,
+    criterionCount: 11,
   },
   {
     type: 'game-dynamic',
@@ -535,7 +603,7 @@ export const STANDARDS_META: StandardMeta[] = [
     animation: '可动',
     description: '用于游戏引擎的角色、生物等需要骨骼动画的模型。对关节布线、变形区域面数有严格要求。',
     dimensionCount: 4,
-    criterionCount: 9,
+    criterionCount: 11,
   },
   {
     type: 'general-static',
@@ -544,7 +612,7 @@ export const STANDARDS_META: StandardMeta[] = [
     animation: '静态',
     description: '用于影视、动画、3D打印、展示等非游戏场景的静态模型。标准相对宽松，更注重造型和布线流畅度。',
     dimensionCount: 3,
-    criterionCount: 9,
+    criterionCount: 11,
   },
   {
     type: 'general-dynamic',
@@ -553,6 +621,6 @@ export const STANDARDS_META: StandardMeta[] = [
     animation: '可动',
     description: '用于影视动画、VFX 等非游戏场景的可动模型。兼顾造型自由度和绑定动画需求。',
     dimensionCount: 4,
-    criterionCount: 9,
+    criterionCount: 11,
   },
 ]

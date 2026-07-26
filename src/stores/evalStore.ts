@@ -51,6 +51,11 @@ export const useEvalStore = create<EvalStore>()((set) => ({
   resetEval: () => set({ autoReport: null, manualRatings: {}, flowReviewScores: null, flowTotal: null, flowSaved: false }),
 }))
 
+/** Round to 1 decimal place for scores. */
+export function roundScore(n: number): number {
+  return Math.round(n * 10) / 10
+}
+
 /**
  * Compute the score for a single auto-detectable criterion.
  */
@@ -58,7 +63,7 @@ export function computeAutoScore(
   criterion: EvaluationCriterion,
   report: TopologyReport,
 ): number {
-  const { faceStats, nonManifold, overlapping } = report
+  const { faceStats, nonManifold, overlapping, boundary } = report
   const maxScore = criterion.maxScore
 
   switch (criterion.id) {
@@ -78,21 +83,23 @@ export function computeAutoScore(
         threshold = 0.10
         penaltyRate = 1.0
       }
-      // Allow gentler thresholds for general models (handled via wider ranges)
       if (triRatio <= threshold) return maxScore
       const excess = triRatio - threshold
       const penalty = excess * maxScore * 10 * penaltyRate
-      return Math.max(0, Math.round(maxScore - penalty))
+      return roundScore(Math.max(0, maxScore - penalty))
     }
 
     case 'ngon-count':
-      return Math.max(0, maxScore - faceStats.ngonCount)
+      return roundScore(Math.max(0, maxScore - faceStats.ngonCount))
 
     case 'non-manifold':
-      return Math.max(0, maxScore - Math.ceil(nonManifold.count * 0.5))
+      return roundScore(Math.max(0, maxScore - nonManifold.count * 0.5))
 
     case 'overlapping':
-      return Math.max(0, maxScore - Math.ceil(overlapping.count * 0.5))
+      return roundScore(Math.max(0, maxScore - overlapping.count * 0.5))
+
+    case 'boundary-holes':
+      return roundScore(Math.max(0, maxScore - boundary.count * 0.5))
 
     default:
       return 0
@@ -103,7 +110,7 @@ export function computeAutoScore(
  * Compute the score for a manual rating.
  */
 export function computeManualScore(criterion: EvaluationCriterion, level: RatingLevel): number {
-  return Math.round(RATING_PCTS[level] * criterion.maxScore)
+  return roundScore(RATING_PCTS[level] * criterion.maxScore)
 }
 
 /**
@@ -130,5 +137,5 @@ export function computeTotalScore(
     }
   }
 
-  return { autoTotal, manualTotal, total: autoTotal + manualTotal, maxTotal: standard.totalScore }
+  return { autoTotal: roundScore(autoTotal), manualTotal: roundScore(manualTotal), total: roundScore(autoTotal + manualTotal), maxTotal: standard.totalScore }
 }

@@ -3,7 +3,7 @@ import { Save, ListChecks } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Card, CardContent } from '@/components/ui/card'
-import { useEvalStore, computeTotalScore, computeAutoScore, computeManualScore } from '@/stores/evalStore'
+import { useEvalStore, computeTotalScore, computeAutoScore, computeManualScore, roundScore } from '@/stores/evalStore'
 import { useCompareStore } from '@/stores/compareStore'
 import { useEvalHistoryStore, type EvalHistoryRecord } from '@/stores/evalHistoryStore'
 import { useEvalFlowStore, isAllScored, computeFlowTotal, type FlattenedCriterion } from '@/stores/evalFlowStore'
@@ -155,7 +155,7 @@ export function CompareEvalPanel() {
       let score = 0
       for (const crit of dim.criteria) {
         const raw = flowReviewScores[crit.id] ?? 0
-        score += Math.round((raw / 10) * crit.maxScore)
+        score += roundScore((raw / 10) * crit.maxScore)
       }
       return {
         dimensionId: dim.id,
@@ -390,7 +390,7 @@ export function CompareEvalPanel() {
                   </h4>
                   <div className="flex items-baseline gap-1 mt-1">
                     <span className={`mono text-[32px] font-bold leading-none ${totalColor}`}>
-                      {displayScores.total}
+                      {displayScores.total.toFixed(1)}
                     </span>
                     <span className="text-[13px] text-text-tertiary">/ {displayScores.maxTotal}</span>
                   </div>
@@ -447,12 +447,12 @@ export function CompareEvalPanel() {
                       </div>
                       {dim.criteria.map((crit) => {
                         const raw = flowReviewScores[crit.id] ?? 0
-                        const mapped = Math.round((raw / 10) * crit.maxScore)
+                        const mapped = roundScore((raw / 10) * crit.maxScore)
                         return (
                           <div key={crit.id} className="flex items-center justify-between text-[11px]">
                             <span className="text-text-secondary">{crit.name}</span>
                             <span className="mono text-text-primary">
-                              {raw}/10 → {mapped}/{crit.maxScore}
+                              {raw}/10 → {mapped.toFixed(1)}/{crit.maxScore}
                             </span>
                           </div>
                         )

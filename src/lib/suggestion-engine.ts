@@ -18,12 +18,6 @@ export function generateSuggestions(input: SuggestionInput): EvaluationSuggestio
   const good: SuggestionItem[] = []
   const isAnimation = evaluationType.endsWith('-dynamic')
 
-  // Helper: get dimension score ratio
-  const getDimRatio = (dimId: string) => {
-    const dim = dimensionScores.find((d) => d.dimensionId === dimId)
-    return dim ? dim.score / dim.maxScore : 1
-  }
-
   // ===== 自动检测项分析 =====
   if (autoReport) {
     const { faceStats, nonManifold, overlapping, boundary } = autoReport

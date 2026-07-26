@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Loader, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
@@ -14,8 +14,7 @@ interface Report3DPreviewProps {
   record: EvalHistoryRecord
 }
 
-function ReportScene({ modelUrl, modelLoaded, faceData }: {
-  modelUrl?: string
+function ReportScene({ modelLoaded, faceData }: {
   modelLoaded: boolean
   faceData: OBJFaceData | null
 }) {
@@ -42,7 +41,7 @@ function ReportScene({ modelUrl, modelLoaded, faceData }: {
 
       {modelLoaded && (
         <LoadedModel
-          model={useModelStore.getState().modelObject}
+          model={useModelStore.getState().modelObject!}
           renderMode="solid"
           objFaceData={faceData}
           forceSolid
@@ -88,7 +87,7 @@ export function Report3DPreview({ record }: Report3DPreviewProps) {
 
       try {
         const { loadModelFromUrl, loadModelFromText } = useModelStore.getState()
-        const { startLoading, setProgress, finishLoading, setError: setLoadError } = useLoadingStore.getState()
+        const { startLoading, setProgress, finishLoading } = useLoadingStore.getState()
 
         if (record.modelUrl) {
           startLoading()

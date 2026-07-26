@@ -109,7 +109,7 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
       onProgress?.(60, 'analyze', '正在分析拓扑结构...')
 
-      const report = analyzeTopology(group, objFaceData, (step, total, label) => {
+      analyzeTopology(group, objFaceData, (step, total, label) => {
         // Map 60-90% across 7 steps
         const baseProgress = 60
         const analyzeRange = 30
@@ -213,7 +213,7 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
       }
 
       // Combine chunks
-      const blob = new Blob(chunks)
+      const blob = new Blob(chunks as BlobPart[])
       const text = await blob.text()
 
       onProgress?.(38, 'parse', '正在解析模型数据...')

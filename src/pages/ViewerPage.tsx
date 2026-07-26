@@ -30,7 +30,6 @@ export function ViewerPage() {
   const flowCriteria = useEvalFlowStore((s) => s.criteria)
   const flowGoTo = useEvalFlowStore((s) => s.goTo)
   const flowSetScore = useEvalFlowStore((s) => s.setScore)
-  const flowScores = useEvalFlowStore((s) => s.reviewScores)
 
   // 结构跟随性叠加模式
   const isStructureMode = criterionId === 'structure' && referenceModel !== null

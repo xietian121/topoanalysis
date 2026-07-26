@@ -16,7 +16,7 @@ import { RadarChart } from '@/components/evaluation/RadarChart'
 import { ScoreBadge } from '@/components/evaluation/ScoreBadge'
 import { DimensionAccordion } from '@/components/report/DimensionAccordion'
 import { MODEL_TYPE_LABELS } from '@/types/evaluation'
-import type { EvaluationSuggestions, SuggestionItem } from '@/types/evaluation'
+import type { SuggestionItem } from '@/types/evaluation'
 
 function SuggestionSection({ title, items, icon: Icon, colorClass, borderClass, onItemClick }: {
   title: string

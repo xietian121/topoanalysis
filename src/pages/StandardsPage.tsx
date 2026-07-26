@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { StandardCard } from '@/components/standards/StandardCard'
 import { EVALUATION_STANDARDS, STANDARDS_META } from '@/data/evaluation-standards'
-import type { EvaluationType } from '@/types/evaluation'
 
 const TAB_GROUPS = [
   {
@@ -52,9 +51,9 @@ export function StandardsPage() {
             ))}
           </div>
 
-          {TAB_GROUPS.flatMap(g => g.types).map((t) => (
+          {TAB_GROUPS.flatMap(g => g.types).map((t: { value: string; label: string }) => (
             <TabsContent key={t.value} value={t.value}>
-              <StandardCard standard={EVALUATION_STANDARDS[t.value]} />
+              <StandardCard standard={EVALUATION_STANDARDS[t.value as keyof typeof EVALUATION_STANDARDS]} />
             </TabsContent>
           ))}
         </Tabs>

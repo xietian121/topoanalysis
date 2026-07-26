@@ -78,7 +78,7 @@ export function TutorialPage() {
           group: excGroup,
           faceData: excFaceData,
           name: excellentDef.name,
-          fileSize: excellentDef.record.fileSize,
+          fileSize: excellentDef.record.modelFileSize,
         })
 
         setProgress(100, 'done', '加载完成')

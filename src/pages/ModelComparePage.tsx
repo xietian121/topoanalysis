@@ -1,14 +1,12 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search, X, TrendingUp, TrendingDown, Minus, Plus, Trophy, Swords } from 'lucide-react'
+import { ArrowLeft, Search, X, Minus, Plus, Trophy, Swords } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useEvalHistoryStore, type EvalHistoryRecord } from '@/stores/evalHistoryStore'
 import { getExampleRecords } from '@/data/example-models'
-import { RadarChart } from '@/components/evaluation/RadarChart'
-import { ScoreBadge } from '@/components/evaluation/ScoreBadge'
-import { MODEL_TYPE_LABELS, type EvaluationType } from '@/types/evaluation'
+import { MODEL_TYPE_LABELS } from '@/types/evaluation'
 
 function ModelPickerDialog({ onSelect, onClose, selected }: {
   onSelect: (record: EvalHistoryRecord) => void

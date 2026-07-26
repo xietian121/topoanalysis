@@ -21,7 +21,6 @@ export function ScoringHeader() {
   const modelText = useModelStore((s) => s.modelText)
   const autoReport = useEvalStore((s) => s.autoReport)
   const evaluationType = useEvalStore((s) => s.evaluationType)
-  const flowReviewScores = useEvalStore((s) => s.flowReviewScores)
   const setFlowResult = useEvalStore((s) => s.setFlowResult)
   const flowCriteria = useEvalFlowStore((s) => s.criteria)
   const flowScores = useEvalFlowStore((s) => s.reviewScores)
@@ -55,15 +54,7 @@ export function ScoringHeader() {
     setShowIncompleteConfirm(false)
     try {
       // Compute final scores
-      const { total, dimensionScores } = computeFlowTotal(allCriteria, flowScores)
-      const autoTotal = dimensionScores
-        ? Object.values(dimensionScores)
-            .filter((d) => {
-              const std = getStandardByType(evaluationType)
-              return std.dimensions.some((sd) => sd.name === (d as unknown as { score: number; maxScore: number }).maxScore)
-            })
-            .reduce((s, d) => s + d.score, 0)
-        : 0
+      const { total } = computeFlowTotal(allCriteria, flowScores)
 
       // Transfer flow scores to evalStore
       setFlowResult({ ...flowScores }, total)
@@ -210,7 +201,7 @@ export function ScoringHeader() {
 
         {/* Submit button */}
         <button
-          onClick={handleSubmit}
+          onClick={() => handleSubmit()}
           disabled={submitting}
           className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[12px] font-medium transition-all duration-200 shrink-0 ${
             allScored && !submitting

@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react'
 import { BarChart4, TrendingUp, Star, AlertTriangle, Lightbulb, Target } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { useEvalHistoryStore } from '@/stores/evalHistoryStore'
 import { getExampleRecords } from '@/data/example-models'
 import { RadarChart } from '@/components/evaluation/RadarChart'
-import type { EvaluationType } from '@/types/evaluation'
 
 type FilterType = 'all' | 'example' | 'user' | 'game' | 'general'
 

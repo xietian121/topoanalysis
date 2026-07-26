@@ -46,7 +46,6 @@ export function DimensionAccordion({
       {dimensions.map((dim) => {
         const isOpen = openIds.has(dim.dimensionId)
         const ratio = dim.maxScore > 0 ? dim.score / dim.maxScore : 0
-        const colorClass = ratio < 0.4 ? 'text-red-500' : ratio < 0.7 ? 'text-amber-500' : 'text-emerald-500'
 
         return (
           <div

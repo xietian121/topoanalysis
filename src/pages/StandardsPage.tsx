@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { StandardCard } from '@/components/standards/StandardCard'
 import { EVALUATION_STANDARDS, STANDARDS_META } from '@/data/evaluation-standards'
+import type { EvaluationType } from '@/types/evaluation'
 
 const TAB_GROUPS = [
   {
@@ -22,6 +23,16 @@ const TAB_GROUPS = [
 
 export function StandardsPage() {
   const [activeTab, setActiveTab] = useState<string>('game-static')
+
+  const allTabs = useMemo(() => {
+    const result: { value: string; label: string }[] = []
+    for (const g of TAB_GROUPS) {
+      for (const t of g.types) {
+        result.push(t)
+      }
+    }
+    return result
+  }, [])
 
   return (
     <div className="h-full overflow-auto">
@@ -51,9 +62,9 @@ export function StandardsPage() {
             ))}
           </div>
 
-          {TAB_GROUPS.flatMap(g => g.types).map((t: { value: string; label: string }) => (
+          {allTabs.map((t) => (
             <TabsContent key={t.value} value={t.value}>
-              <StandardCard standard={EVALUATION_STANDARDS[t.value as keyof typeof EVALUATION_STANDARDS]} />
+              <StandardCard standard={EVALUATION_STANDARDS[t.value as EvaluationType]} />
             </TabsContent>
           ))}
         </Tabs>

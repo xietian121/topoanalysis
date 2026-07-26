@@ -160,7 +160,7 @@ export function Report3DPreview({ record }: Report3DPreviewProps) {
         }}
         style={{ background: '#e8e8ed' }}
       >
-        <ReportScene modelUrl={record.modelUrl} modelLoaded={modelReady} faceData={faceData} />
+        <ReportScene modelLoaded={modelReady} faceData={faceData} />
       </Canvas>
       <Loader
         containerStyles={{

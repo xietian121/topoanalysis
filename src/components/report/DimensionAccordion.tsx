@@ -45,7 +45,6 @@ export function DimensionAccordion({
     <div className="space-y-2">
       {dimensions.map((dim) => {
         const isOpen = openIds.has(dim.dimensionId)
-        const ratio = dim.maxScore > 0 ? dim.score / dim.maxScore : 0
 
         return (
           <div

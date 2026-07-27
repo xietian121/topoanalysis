@@ -1,0 +1,134 @@
+示例模型逐条准则评分模板
+===========================
+格式说明：
+- 每个模型以 [模型ID] 开头
+- 每行一条准则：准则ID = 分数 (1-10, 10=满分)
+- 修改等号后面的数字即可，然后告诉我"好了"
+
+============================================================
+[example_game-static_excellent]  游戏道具·优秀案例 (当前总分90)
+============================================================
+quad-tri-ratio = 9
+tri-distribution = 8
+pole-distribution = 9
+ngon-count = 10
+non-manifold = 10
+overlapping = 10
+boundary-holes = 9
+structure = 8
+flat-optimization = 7
+density = 8
+loop-edges = 9
+
+============================================================
+[example_game-static_problematic]  游戏道具·问题案例 (当前总分50)
+============================================================
+quad-tri-ratio = 4
+tri-distribution = 4
+pole-distribution = 4
+ngon-count = 5
+non-manifold = 4
+overlapping = 5
+boundary-holes = 4
+structure = 4
+flat-optimization = 4
+density = 4
+loop-edges = 4
+
+============================================================
+[example_game-dynamic_excellent]  游戏角色·优秀案例 (当前总分88)
+============================================================
+quad-tri-ratio = 9
+tri-distribution = 9
+pole-distribution = 8
+ngon-count = 10
+non-manifold = 10
+overlapping = 10
+boundary-holes = 10
+structure = 9
+flat-optimization = 9
+density = 9
+loop-edges = 9
+joint-density = 9
+joint-loop = 9
+
+============================================================
+[example_game-dynamic_problematic]  游戏角色·问题案例 (当前总分47)
+============================================================
+quad-tri-ratio = 3
+tri-distribution = 3
+pole-distribution = 3
+ngon-count = 4
+non-manifold = 4
+overlapping = 4
+boundary-holes = 4
+structure = 3
+flat-optimization = 3
+density = 3
+loop-edges = 3
+joint-density = 3
+joint-loop = 3
+
+============================================================
+[example_general-static_excellent]  建筑场景·优秀案例 (当前总分88)
+============================================================
+quad-tri-ratio = 9
+tri-distribution = 8
+pole-distribution = 9
+ngon-count = 10
+non-manifold = 10
+overlapping = 10
+boundary-holes = 9
+structure = 8
+flat-optimization = 8
+density = 8
+loop-edges = 9
+
+============================================================
+[example_general-static_problematic]  展示道具·问题案例 (当前总分45)
+============================================================
+quad-tri-ratio = 3
+tri-distribution = 3
+pole-distribution = 3
+ngon-count = 4
+non-manifold = 4
+overlapping = 4
+boundary-holes = 4
+structure = 3
+flat-optimization = 3
+density = 3
+loop-edges = 3
+
+============================================================
+[example_general-dynamic_excellent]  影视角色·优秀案例 (当前总分83)
+============================================================
+quad-tri-ratio = 8
+tri-distribution = 8
+pole-distribution = 8
+ngon-count = 10
+non-manifold = 10
+overlapping = 9
+boundary-holes = 9
+structure = 8
+flat-optimization = 7
+density = 8
+loop-edges = 8
+joint-density = 7
+joint-loop = 7
+
+============================================================
+[example_general-dynamic_problematic]  影视角色·问题案例 (当前总分48)
+============================================================
+quad-tri-ratio = 3
+tri-distribution = 3
+pole-distribution = 3
+ngon-count = 4
+non-manifold = 4
+overlapping = 4
+boundary-holes = 4
+structure = 3
+flat-optimization = 3
+density = 3
+loop-edges = 3
+joint-density = 3
+joint-loop = 3

@@ -9,6 +9,8 @@ export interface LoadModelOptions {
   onProgress?: (progress: number, stage: string, text: string) => void
   /** AbortSignal for cancelling fetch */
   signal?: AbortSignal
+  /** 标记为示例模型，不可打分 */
+  isExample?: boolean
 }
 
 interface ModelStore {
@@ -249,6 +251,7 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
         format: 'obj',
         fileSize: blob.size,
         uploadedAt: new Date().toISOString(),
+        isExample: options?.isExample,
       }
 
       onProgress?.(100, 'done', '加载完成')

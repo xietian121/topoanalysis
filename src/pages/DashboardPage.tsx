@@ -162,7 +162,7 @@ export function DashboardPage() {
   )
 
   const handleCardClick = useCallback(async (record: EvalHistoryRecord) => {
-    // 已评测的示例模型 → 加载模型后进入查看器
+    // 示例模型 → 加载模型后直接进入分析报告页
     if (record.isExample && record.modelUrl) {
       const { startLoading, setProgress, setError, finishLoading, abortController } = useLoadingStore.getState()
       startLoading()
@@ -181,6 +181,7 @@ export function DashboardPage() {
             setProgress(progress, stage as 'download' | 'parse' | 'analyze' | 'init' | 'done', text)
           },
           signal: abortController?.signal,
+          isExample: true,
         })
 
         // 尝试加载对应高模
@@ -201,7 +202,7 @@ export function DashboardPage() {
         }
 
         finishLoading()
-        navigate('/viewer/single')
+        navigate(`/report/${record.id}`)
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return
         console.error('示例模型加载失败:', err)
@@ -232,7 +233,7 @@ export function DashboardPage() {
     })
   }, [allExampleDefs])
 
-  // 单独查看某个示例模型
+  // 单独查看某个示例模型 → 直接进入分析报告页
   const handleViewModel = useCallback(async (def: ExampleModelDef) => {
     const { startLoading, setProgress, setError, finishLoading, abortController } = useLoadingStore.getState()
     startLoading()
@@ -245,6 +246,7 @@ export function DashboardPage() {
           setProgress(progress, stage as 'download' | 'parse' | 'analyze' | 'init' | 'done', text)
         },
         signal: abortController?.signal,
+        isExample: true,
       })
       if (def.referenceModelUrl) {
         try {
@@ -258,7 +260,7 @@ export function DashboardPage() {
         } catch { /* 高模加载失败不影响 */ }
       }
       finishLoading()
-      navigate('/viewer/single')
+      navigate(`/report/${def.record.id}`)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
       console.error('示例模型加载失败:', err)

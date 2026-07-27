@@ -40,6 +40,10 @@ export function ScoringHeader() {
       addToast('模型数据缺失，请重新加载模型', 'error')
       return
     }
+    if (currentModel.isExample) {
+      addToast('示例模型不允许打分，请返回查看分析报告', 'error')
+      return
+    }
     if (!autoReport) {
       addToast('自动分析尚未完成，请等待拓扑分析结束后再提交', 'error')
       return

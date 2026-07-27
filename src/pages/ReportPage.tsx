@@ -12,7 +12,7 @@ import { useHighlightStore } from '@/stores/highlightStore'
 import { useLoadingStore } from '@/stores/loadingStore'
 import { generateAIAnalysis } from '@/lib/ai-analysis'
 import type { AIAnalysisResult } from '@/lib/ai-analysis'
-import { getExampleRecords } from '@/data/example-models'
+import { getExampleRecords, getExampleDefs } from '@/data/example-models'
 import { getStandardByType } from '@/data/evaluation-standards'
 import { RadarChart } from '@/components/evaluation/RadarChart'
 import { ScoreBadge } from '@/components/evaluation/ScoreBadge'
@@ -144,7 +144,26 @@ export function ReportPage() {
             onProgress: (progress, stage, text) => {
               setProgress(progress, stage as Parameters<typeof setProgress>[1], text)
             },
+            isExample: record.isExample,
           })
+
+          // Load reference high model for example models
+          if (record.isExample) {
+            try {
+              const def = getExampleDefs().find((d) => d.id === record.id)
+              if (def?.referenceModelUrl) {
+                const loadReferenceModel = useModelStore.getState().loadReferenceModel
+                const highRes = await fetch(def.referenceModelUrl)
+                if (highRes.ok) {
+                  const highText = await highRes.text()
+                  const highFile = new File([highText], "high.obj", { type: "application/octet-stream" })
+                  await loadReferenceModel(highFile)
+                }
+              }
+            } catch {
+              console.warn("Reference high model load failed")
+            }
+          }
           finishLoading()
         } else if (record.modelText) {
           startLoading()
@@ -289,13 +308,16 @@ export function ReportPage() {
 
           <div className="flex-1" />
 
-          <button
-            onClick={handleRescore}
-            className="inline-flex items-center gap-1.5 rounded-full glass-btn px-3 py-1 text-[12px] font-medium text-text-primary transition-all duration-200"
-          >
-            <RefreshCw className="h-3 w-3" />
-            重新打分
-          </button>
+          {/* 示例模型不允许重新打分 */}
+          {!record.isExample && (
+            <button
+              onClick={handleRescore}
+              className="inline-flex items-center gap-1.5 rounded-full glass-btn px-3 py-1 text-[12px] font-medium text-text-primary transition-all duration-200"
+            >
+              <RefreshCw className="h-3 w-3" />
+              重新打分
+            </button>
+          )}
         </div>
 
         {/* 3D canvas area */}

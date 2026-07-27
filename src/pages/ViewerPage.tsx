@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { CompareCanvas } from '@/components/viewer/CompareCanvas'
 import { ModelInfoOverlay } from '@/components/viewer/ModelInfoOverlay'
@@ -9,6 +10,7 @@ import { useModelStore } from '@/stores/modelStore'
 import { useViewerStore } from '@/stores/viewerStore'
 import { useHighlightStore } from '@/stores/highlightStore'
 import { useEvalFlowStore } from '@/stores/evalFlowStore'
+import { getExampleDefs } from '@/data/example-models'
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -17,6 +19,7 @@ function formatSize(bytes: number) {
 }
 
 export function ViewerPage() {
+  const navigate = useNavigate()
   const modelObject = useModelStore((s) => s.modelObject)
   const currentModel = useModelStore((s) => s.currentModel)
   const objFaceData = useModelStore((s) => s.objFaceData)
@@ -30,6 +33,19 @@ export function ViewerPage() {
   const flowCriteria = useEvalFlowStore((s) => s.criteria)
   const flowGoTo = useEvalFlowStore((s) => s.goTo)
   const flowSetScore = useEvalFlowStore((s) => s.setScore)
+
+  // Guard: example models cannot be scored — redirect to report page
+  useEffect(() => {
+    if (!currentModel?.isExample) return
+    const def = getExampleDefs().find(
+      (d) => d.modelUrl && currentModel.name && d.name === currentModel.name,
+    )
+    if (def) {
+      navigate(`/report/${def.record.id}`, { replace: true })
+    } else {
+      navigate('/', { replace: true })
+    }
+  }, [currentModel, navigate])
 
   const setRenderMode = useViewerStore((s) => s.setRenderMode)
 

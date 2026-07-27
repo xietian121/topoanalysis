@@ -616,20 +616,25 @@ export function detectDensity(model: THREE.Group): DensityData {
 }
 
 // ---------------------------------------------------------------------------
-// Edge loop detection — find closed edge loops in quad-dominant meshes
+// Edge loop detection — find closed transverse edge rings in quad-dominant meshes
 // ---------------------------------------------------------------------------
 
 /**
- * Detect closed edge loops in a quad-dominant mesh.
+ * Detect closed "ring" edge loops in a quad-dominant mesh.
  *
- * Algorithm:
- * 1. Build edge→face map for all edges
- * 2. For each quad face, compute the "opposite edge" for each of its 4 edges
- *    (edges that don't share a vertex are opposite in a quad)
- * 3. Build adjacency: for each internal edge ek, collect ALL opposite edges
- *    from each quad sharing ek → Set{0-2 entries}
- * 4. Walk each chain: from an unvisited edge, follow a consistent direction
- *    until returning to start (closed loop) or dead-ending (not a loop)
+ * Definition: An edge loop is a chain of edges that circles AROUND a form
+ * (like horizontal rings on a vertical cylinder). It follows edges that go
+ * "straight" through each vertex — the OPPOSITE edge at the vertex.
+ *
+ * Algorithm (vertex-opposite, not quad-opposite):
+ * 1. Build edge→faces + vertex→faces maps
+ * 2. For each vertex, determine which edges are "opposite" (go straight through)
+ * 3. Walk chains: at each vertex, follow the opposite edge
+ * 4. Keep only closed loops (ring around a form)
+ *
+ * Key fix from previous version: previously we followed opposite edges WITHIN
+ * quads (e01→e23), which went UP/DOWN rows on a cylinder. Now we follow
+ * opposite edges through VERTICES, which stays in the SAME row.
  */
 export function detectEdgeLoops(faceData: OBJFaceData | null): EdgeLoopResult | undefined {
   if (!faceData) return undefined
@@ -645,8 +650,14 @@ export function detectEdgeLoops(faceData: OBJFaceData | null): EdgeLoopResult | 
   const edgeKey = (vi0: number, vi1: number) =>
     vi0 < vi1 ? `${vi0}|${vi1}` : `${vi1}|${vi0}`
 
-  // Step 1: Build edge → faces map + all edges list
+  // ── Step 1: Build maps ──
+  // edge → faces (which faces contain this edge?)
   const edgeFaces = new Map<string, number[]>()
+  // vertex → edges (which edges are incident to this vertex?)
+  const vertexEdges = new Map<number, Set<string>>()
+  // vertex → faces (which faces contain this vertex?)
+  const vertexFaces = new Map<number, Set<number>>()
+  // all unique edges
   const allEdges: Array<{ key: string; vi0: number; vi1: number }> = []
 
   let faceIdx = 0
@@ -657,128 +668,261 @@ export function detectEdgeLoops(faceData: OBJFaceData | null): EdgeLoopResult | 
         const vi0 = face[i]
         const vi1 = face[(i + 1) % n]
         const ek = edgeKey(vi0, vi1)
-        const list = edgeFaces.get(ek)
-        if (list) {
-          list.push(faceIdx)
+
+        // edge → faces
+        const efList = edgeFaces.get(ek)
+        if (efList) {
+          efList.push(faceIdx)
         } else {
           edgeFaces.set(ek, [faceIdx])
           allEdges.push({ key: ek, vi0, vi1 })
         }
+
+        // vertex → edges
+        for (const vi of [vi0, vi1]) {
+          let ve = vertexEdges.get(vi)
+          if (!ve) { ve = new Set(); vertexEdges.set(vi, ve) }
+          ve.add(ek)
+        }
+
+        // vertex → faces
+        for (const vi of face) {
+          let vf = vertexFaces.get(vi)
+          if (!vf) { vf = new Set(); vertexFaces.set(vi, vf) }
+          vf.add(faceIdx)
+        }
       }
       faceIdx++
     }
   }
 
-  // Step 2: Precompute opposite-edge mapping per quad face
-  // For quad [v0,v1,v2,v3]: edges = [e01, e12, e23, e30]
-  // opposite(e01) = e23, opposite(e12) = e30, etc.
-  const faceOppositeMap = new Map<number, Map<string, string>>()
+  // ── Step 2: For each edge, precompute the "opposite edge" at each endpoint ──
+  // opposite[a] = the edge key that continues straight through vertex vi0
+  interface EdgeContinuation {
+    at0: string | null  // continuation through vi0
+    at1: string | null  // continuation through vi1
+  }
+  const continuations = new Map<string, EdgeContinuation>()
 
-  faceIdx = 0
-  for (const group of faceData.groups) {
-    for (const face of group) {
-      const n = face.length
-      if (n === 4) {
-        const edges: string[] = []
-        for (let i = 0; i < n; i++) {
-          edges.push(edgeKey(face[i], face[(i + 1) % n]))
+  function findOppositeAtVertex(ek: string, atVertex: number, _otherVertex: number): string | null {
+    // Faces that contain this edge
+    const facesWithEdge = edgeFaces.get(ek)
+    if (!facesWithEdge || facesWithEdge.length === 0) return null
+
+    // Edges incident to atVertex
+    const edgesAtVertex = vertexEdges.get(atVertex)
+    if (!edgesAtVertex) return null
+
+    // The "opposite" edge is the one that is NOT in any face containing BOTH
+    // vertices of the incoming edge. I.e., it shares NO face with the incoming edge.
+    for (const candidateKey of edgesAtVertex) {
+      if (candidateKey === ek) continue
+
+      // Parse the candidate edge to find the other vertex
+      const [s0, s1] = candidateKey.split('|')
+      const cv0 = parseInt(s0, 10)
+      const cv1 = parseInt(s1, 10)
+
+      // Both candidate and incoming edge must share atVertex
+      if (cv0 !== atVertex && cv1 !== atVertex) continue
+
+      // Faces that contain candidate edge
+      const facesWithCandidate = edgeFaces.get(candidateKey)
+      if (!facesWithCandidate) continue
+
+      // Check if any face contains BOTH edges
+      let sharesFace = false
+      for (const fid of facesWithEdge) {
+        if (facesWithCandidate.includes(fid)) {
+          sharesFace = true
+          break
         }
-        const oppMap = new Map<string, string>()
-        for (let i = 0; i < n; i++) {
-          oppMap.set(edges[i], edges[(i + 2) % n])
-        }
-        faceOppositeMap.set(faceIdx, oppMap)
       }
-      faceIdx++
+
+      if (!sharesFace) {
+        return candidateKey
+      }
+    }
+
+    return null
+  }
+
+  for (const { key: ek, vi0, vi1 } of allEdges) {
+    const opp0 = findOppositeAtVertex(ek, vi0, vi1)
+    const opp1 = findOppositeAtVertex(ek, vi1, vi0)
+    if (opp0 || opp1) {
+      continuations.set(ek, { at0: opp0, at1: opp1 })
     }
   }
 
-  // Step 3: Build adjacency — each edge → Set of opposite edges (0, 1, or 2)
-  const neighbors = new Map<string, Set<string>>()
-
-  for (const { key: ek } of allEdges) {
-    const faces = edgeFaces.get(ek) ?? []
-    // Only consider internal edges (shared by exactly 2 faces)
-    if (faces.length !== 2) continue
-
-    const nbrs = new Set<string>()
-    for (const fid of faces) {
-      const oppMap = faceOppositeMap.get(fid)
-      if (!oppMap) continue // only quads contribute
-      const opp = oppMap.get(ek)
-      if (opp && opp !== ek) {
-        nbrs.add(opp)
-      }
-    }
-    if (nbrs.size > 0) {
-      neighbors.set(ek, nbrs)
-    }
-  }
-
-  // Step 4: Walk chains to find closed loops
+  // ── Step 3: Walk chains to find closed loops ──
   const visited = new Set<string>()
   const loops: EdgeLoop[] = []
 
-  for (const { key: startKey } of allEdges) {
+  for (const { key: startKey, vi0, vi1 } of allEdges) {
     if (visited.has(startKey)) continue
-    const startNbrs = neighbors.get(startKey)
-    if (!startNbrs || startNbrs.size === 0) continue
 
-    // Try each neighbor as the first step (edge loops are undirected — 2 possible directions)
-    for (const firstStep of startNbrs) {
-      if (visited.has(firstStep)) continue
+    const startCont = continuations.get(startKey)
+    if (!startCont || (!startCont.at0 && !startCont.at1)) {
+      visited.add(startKey)
+      continue
+    }
 
-      const walk: string[] = [startKey, firstStep]
-      let prev = startKey
-      let current = firstStep
+    // Try walking in both directions from start
+    for (const initialDir of [0, 1] as const) {
+      const firstCont = initialDir === 0 ? startCont.at1 : startCont.at0
+      if (!firstCont) continue
+      if (visited.has(startKey)) break // already found a loop containing this edge
+
+      const walk: string[] = [startKey]
+
+      // Determine which vertex of startKey connects to firstCont
+      const startVerts = initialDir === 0 ? [vi0, vi1] : [vi1, vi0]
+      let currentKey = startKey
+      let currentVertex = startVerts[1] // the vertex we walk THROUGH
+
       let closed = false
 
       while (true) {
-        const curNbrs = neighbors.get(current)
-        if (!curNbrs) break // dead end (non-quad adjacent) → not a loop
+        const cont = continuations.get(currentKey)
+        if (!cont) break
 
-        // Find the neighbor that is NOT prev (continue in the same direction)
-        let next = ''
-        for (const n of curNbrs) {
-          if (n !== prev) { next = n; break }
+        // Which continuation to use depends on which vertex we just passed through
+        let nextKey: string | null = null
+        const [s0, s1] = currentKey.split('|')
+        const cv0 = parseInt(s0, 10)
+        const cv1 = parseInt(s1, 10)
+
+        if (currentVertex === cv0) {
+          nextKey = cont.at0
+        } else if (currentVertex === cv1) {
+          nextKey = cont.at1
         }
 
-        if (!next) break // no continuation → not a closed loop
-
-        if (next === startKey) {
-          // Closed back to start → found a loop!
+        if (!nextKey) break
+        if (nextKey === startKey) {
           closed = true
           break
         }
+        if (visited.has(nextKey) || walk.includes(nextKey)) break
 
-        if (walk.includes(next)) break // hit a previously visited edge in this walk → tangled
+        walk.push(nextKey)
 
-        walk.push(next)
-        prev = current
-        current = next
+        // Determine which vertex of nextKey we just entered
+        const [n0, n1] = nextKey.split('|')
+        const nv0 = parseInt(n0, 10)
+        const nv1 = parseInt(n1, 10)
+
+        // We entered nextKey through currentVertex, so the other vertex is where we exit
+        const otherVertex = currentVertex === nv0 ? nv1 : nv0
+        currentKey = nextKey
+        currentVertex = otherVertex
       }
 
       if (closed && walk.length >= 4) {
-        // Mark all edges in this loop as visited
+        // Mark all edges visited
         for (const ek of walk) visited.add(ek)
 
-        // Convert edge keys to position pairs
+        // Convert to positions
         const edgePositions: EdgeLoop['edges'] = []
         for (const ek of walk) {
           const [s0, s1] = ek.split('|')
-          const vi0 = parseInt(s0, 10)
-          const vi1 = parseInt(s1, 10)
-          edgePositions.push({ a: getPos(vi0), b: getPos(vi1) })
+          const e0 = parseInt(s0, 10)
+          const e1 = parseInt(s1, 10)
+          edgePositions.push({ a: getPos(e0), b: getPos(e1) })
         }
         loops.push({ edges: edgePositions })
+        break // don't try the other direction
       }
     }
 
-    // Mark start as visited regardless (don't retry failed starts)
     visited.add(startKey)
   }
 
-  return { loops }
+  // ── Step 4: Filter — keep only "ring" loops (compact, circular), discard "longitudinal" ──
+  const ringLoops = filterRingLoops(loops)
+
+  return { loops: ringLoops }
+}
+
+/**
+ * Filter edge loops to keep only "ring" loops (compact, roughly planar, circular)
+ * and discard "longitudinal" loops (elongated, spanning long distances).
+ *
+ * Ring loops go AROUND a form (like horizontal rings on a cylinder).
+ * Longitudinal loops go ALONG a form (like vertical lines on a cylinder).
+ *
+ * Heuristic: ring loops have a high compactness ratio (perimeter² / area)
+ * because they're roughly circular. Longitudinal loops are more line-like.
+ */
+function filterRingLoops(loops: EdgeLoop[]): EdgeLoop[] {
+  if (loops.length <= 0) return loops
+
+  // Compute compactness for each loop
+  const scored = loops.map((loop, idx) => {
+    // Collect all unique vertex positions
+    const vertSet = new Set<string>()
+    const verts: [number, number, number][] = []
+    for (const edge of loop.edges) {
+      for (const v of [edge.a, edge.b]) {
+        const key = `${v[0].toFixed(4)},${v[1].toFixed(4)},${v[2].toFixed(4)}`
+        if (!vertSet.has(key)) {
+          vertSet.add(key)
+          verts.push(v)
+        }
+      }
+    }
+
+    if (verts.length < 4) return { loop, idx, isRing: true, score: 0 } // keep small loops
+
+    // Compute centroid
+    let cx = 0, cy = 0, cz = 0
+    for (const v of verts) { cx += v[0]; cy += v[1]; cz += v[2] }
+    cx /= verts.length; cy /= verts.length; cz /= verts.length
+
+    // Compute bounding box to find the longest axis
+    let minX = Infinity, maxX = -Infinity
+    let minY = Infinity, maxY = -Infinity
+    let minZ = Infinity, maxZ = -Infinity
+    for (const v of verts) {
+      if (v[0] < minX) minX = v[0]; if (v[0] > maxX) maxX = v[0]
+      if (v[1] < minY) minY = v[1]; if (v[1] > maxY) maxY = v[1]
+      if (v[2] < minZ) minZ = v[2]; if (v[2] > maxZ) maxZ = v[2]
+    }
+    const spanX = maxX - minX
+    const spanY = maxY - minY
+    const spanZ = maxZ - minZ
+    const maxSpan = Math.max(spanX, spanY, spanZ)
+    const minSpan = Math.min(spanX, spanY, spanZ)
+    const midSpan = spanX + spanY + spanZ - maxSpan - minSpan
+
+    // For a ring loop: the "thin" axis should be the smallest
+    // (the ring is flat in the plane of the other two axes)
+    // A longitudinal loop will have one very long axis
+    const elongation = maxSpan / Math.max(midSpan, 0.0001)
+
+    // Also compute the perimeter of the loop
+    let perimeter = 0
+    for (const edge of loop.edges) {
+      const dx = edge.b[0] - edge.a[0]
+      const dy = edge.b[1] - edge.a[1]
+      const dz = edge.b[2] - edge.a[2]
+      perimeter += Math.sqrt(dx * dx + dy * dy + dz * dz)
+    }
+
+    // Compactness: high perimeter relative to bounding circle diameter
+    const diameter = Math.sqrt(midSpan * midSpan + maxSpan * maxSpan) * 0.5
+    const compactness = diameter > 0.001 ? perimeter / (Math.PI * diameter) : 0
+
+    // Ring loops have:
+    // - Elongation < 5 (not too stretched in one axis)
+    // - Compactness > 0.3 (somewhat circular, not a straight line)
+    const isRing = elongation < 5 && compactness > 0.3
+
+    return { loop, idx, isRing, score: compactness }
+  })
+
+  return scored.filter(s => s.isRing).map(s => s.loop)
 }
 
 // ---------------------------------------------------------------------------

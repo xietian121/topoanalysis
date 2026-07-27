@@ -204,6 +204,31 @@ function buildLoopLinePositions(
   return new Float32Array(positions)
 }
 
+/**
+ * Extract unique vertex positions from edge loops for point markers.
+ * Makes the loops more visible (WebGL linewidth is limited to 1 on Windows).
+ */
+function buildLoopPointPositions(
+  edgeLoops: import('./topology-analyzer').EdgeLoopResult,
+): Float32Array {
+  const seen = new Set<string>()
+  const positions: number[] = []
+  const key = (v: [number, number, number]) => `${v[0].toFixed(4)},${v[1].toFixed(4)},${v[2].toFixed(4)}`
+
+  for (const loop of edgeLoops.loops) {
+    for (const edge of loop.edges) {
+      for (const v of [edge.a, edge.b]) {
+        const k = key(v)
+        if (!seen.has(k)) {
+          seen.add(k)
+          positions.push(v[0], v[1], v[2])
+        }
+      }
+    }
+  }
+  return new Float32Array(positions)
+}
+
 export function getHighlightData(
   criterionId: string,
   model: THREE.Group,
@@ -342,6 +367,7 @@ export function getHighlightData(
     if (!report.edgeLoops || report.edgeLoops.loops.length === 0) return null
     return {
       lines: { positions: buildLoopLinePositions(report.edgeLoops) },
+      points: { positions: buildLoopPointPositions(report.edgeLoops) },
     }
   }
 

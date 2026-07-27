@@ -25,7 +25,7 @@ const HIGHLIGHT_COLORS: Record<string, string> = {
   'non-manifold': '#ff3b30',      // red — non-manifold edges
   'boundary-holes': '#ff3b30',    // red — boundary/hole edges (x-ray)
   'density': '#4a90d9',           // blue accent — vertex colors override this
-  'loop-edges': '#34c759',        // green — edge loops
+  'loop-edges': '#00ff51',        // 高饱和绿色 — 循环线（横向环线）
 }
 
 /** Criteria whose edge lines should render through the model (depthTest: false) */

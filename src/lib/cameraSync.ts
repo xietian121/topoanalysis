@@ -8,6 +8,6 @@ import * as THREE from 'three'
 export const cameraSync = {
   position: new THREE.Vector3(5, 5, 5),
   target: new THREE.Vector3(0, 0, 0),
-  source: null as 'left' | 'right' | null,
+  source: null as 'left' | 'center' | 'right' | null,
   zoom: 1,
 }

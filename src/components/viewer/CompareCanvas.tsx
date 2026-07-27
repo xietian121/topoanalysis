@@ -11,7 +11,7 @@ interface CompareCanvasProps {
   model: THREE.Group | null
   renderMode: RenderMode
   showGrid: boolean
-  side: 'left' | 'right'
+  side: 'left' | 'center' | 'right'
   materialColor?: string
   materialRoughness?: number
   materialMetalness?: number

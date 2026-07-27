@@ -4,8 +4,9 @@ import { ArrowLeft, AlertTriangle, AlertCircle, CheckCircle2, ExternalLink, Refr
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { ViewerCanvas } from '@/components/viewer/ViewerCanvas'
+import { CompareCanvas } from '@/components/viewer/CompareCanvas'
 import { ViewerToolbar } from '@/components/viewer/ViewerToolbar'
+import { useViewerStore } from '@/stores/viewerStore'
 import { useEvalHistoryStore } from '@/stores/evalHistoryStore'
 import { useEvalStore } from '@/stores/evalStore'
 import { useModelStore } from '@/stores/modelStore'
@@ -114,6 +115,10 @@ export function ReportPage() {
 
   const modelObject = useModelStore((s) => s.modelObject)
   const currentModel = useModelStore((s) => s.currentModel)
+  const referenceModel = useModelStore((s) => s.referenceModel)
+  const objFaceData = useModelStore((s) => s.objFaceData)
+  const renderMode = useViewerStore((s) => s.settings.renderMode)
+  const showGrid = useViewerStore((s) => s.settings.showGrid)
 
   const record = useMemo(() => {
     const all = [...exampleRecords, ...historyRecords]
@@ -322,83 +327,143 @@ export function ReportPage() {
   }, [standard, record.dimensionScores])
 
   return (
-    <div className="flex-1 flex min-h-0 bg-surface-primary">
-      {/* ===== Left: 3D Viewport ===== */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0">
-        {/* Top bar for report page */}
-        <div className="h-10 flex items-center px-4 glass border-b border-black/5 shrink-0 gap-3">
+    <div className="flex-1 flex flex-col min-h-0 bg-surface-primary">
+      {/* ===== Top bar (full width) ===== */}
+      <div className="h-10 flex items-center px-4 glass border-b border-black/5 shrink-0 gap-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-[12px] text-text-tertiary hover:text-text-secondary transition-colors shrink-0"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          返回
+        </button>
+
+        <span className="text-[11px] text-text-tertiary">
+          {MODEL_TYPE_LABELS[record.evaluationType] ?? record.evaluationType}
+        </span>
+
+        {record.isExample && (
+          <Badge variant="secondary" className="text-[10px] bg-accent/10 text-accent">示例</Badge>
+        )}
+
+        <div className="flex-1" />
+
+        {/* 示例模型不允许重新打分 */}
+        {!record.isExample && (
           <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1 text-[12px] text-text-tertiary hover:text-text-secondary transition-colors shrink-0"
+            onClick={handleRescore}
+            className="inline-flex items-center gap-1.5 rounded-full glass-btn px-3 py-1 text-[12px] font-medium text-text-primary transition-all duration-200"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            返回
+            <RefreshCw className="h-3 w-3" />
+            重新打分
           </button>
-
-          <span className="text-[11px] text-text-tertiary">
-            {MODEL_TYPE_LABELS[record.evaluationType] ?? record.evaluationType}
-          </span>
-
-          {record.isExample && (
-            <Badge variant="secondary" className="text-[10px] bg-accent/10 text-accent">示例</Badge>
-          )}
-
-          <div className="flex-1" />
-
-          {/* 示例模型不允许重新打分 */}
-          {!record.isExample && (
-            <button
-              onClick={handleRescore}
-              className="inline-flex items-center gap-1.5 rounded-full glass-btn px-3 py-1 text-[12px] font-medium text-text-primary transition-all duration-200"
-            >
-              <RefreshCw className="h-3 w-3" />
-              重新打分
-            </button>
-          )}
-        </div>
-
-        {/* 3D canvas area */}
-        <div className="flex-1 relative min-h-0">
-          {/* Loading overlay */}
-          {loadingModel && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm">
-              <div className="text-center space-y-2">
-                <div className="h-6 w-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-[12px] text-text-tertiary">加载模型预览...</p>
-              </div>
-            </div>
-          )}
-
-          {/* Error state */}
-          {loadError && !loadingModel && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center">
-              <div className="text-center space-y-2">
-                <p className="text-[13px] text-text-tertiary">3D 预览不可用</p>
-                <p className="text-[11px] text-text-tertiary/60">{loadError}</p>
-              </div>
-            </div>
-          )}
-
-          {/* No model data */}
-          {!loadingModel && !loadError && !modelReady && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <p className="text-[13px] text-text-tertiary">无模型数据</p>
-            </div>
-          )}
-
-          {/* ViewerCanvas — fills parent */}
-          {modelReady && <ViewerCanvas />}
-        </div>
-
-        {/* ViewerToolbar at bottom */}
-        {modelReady && (
-          <div className="flex justify-center pb-3 pt-1 shrink-0">
-            <ViewerToolbar horizontal showActions={false} />
-          </div>
         )}
       </div>
 
-      {/* ===== Right: Analysis Panel ===== */}
+      {/* ===== Three-column layout ===== */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* ── Left: High model viewport ── */}
+        <div className="flex-[2] flex flex-col min-h-0 min-w-0 border-r border-black/5">
+          <div className="h-8 flex items-center px-3 glass border-b border-black/5 shrink-0 gap-2">
+            <span className="text-[11px] font-semibold text-text-secondary">高模参考</span>
+            {referenceModel && (
+              <span className="text-[10px] text-text-tertiary ml-auto">
+                {referenceModel.children.length} 部件
+              </span>
+            )}
+          </div>
+          <div className="flex-1 relative min-h-0">
+            {loadingModel && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                <div className="text-center space-y-2">
+                  <div className="h-6 w-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-[12px] text-text-tertiary">加载中...</p>
+                </div>
+              </div>
+            )}
+            {modelReady && referenceModel && (
+              <CompareCanvas
+                model={referenceModel}
+                renderMode="solid"
+                showGrid={showGrid}
+                side="left"
+                forceSolid
+                highlightAutoReport={null}
+              />
+            )}
+            {modelReady && !referenceModel && !loadingModel && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center space-y-2">
+                  <p className="text-[13px] text-text-tertiary">无参考高模</p>
+                  <p className="text-[10px] text-text-tertiary/60">
+                    {record.isExample ? '高模加载失败' : '此模型未提供参考高模'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Center: Low model viewport ── */}
+        <div className="flex-[2] flex flex-col min-h-0 min-w-0">
+          <div className="h-8 flex items-center px-3 glass border-b border-black/5 shrink-0 gap-2">
+            <span className="text-[11px] font-semibold text-text-primary">低模评测</span>
+            {currentModel && (
+              <span className="text-[10px] text-text-tertiary truncate flex-1 text-right">
+                {currentModel.name}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 relative min-h-0">
+            {/* Loading overlay */}
+            {loadingModel && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                <div className="text-center space-y-2">
+                  <div className="h-6 w-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-[12px] text-text-tertiary">加载模型预览...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Error state */}
+            {loadError && !loadingModel && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center">
+                <div className="text-center space-y-2">
+                  <p className="text-[13px] text-text-tertiary">3D 预览不可用</p>
+                  <p className="text-[11px] text-text-tertiary/60">{loadError}</p>
+                </div>
+              </div>
+            )}
+
+            {/* No model data */}
+            {!loadingModel && !loadError && !modelReady && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <p className="text-[13px] text-text-tertiary">无模型数据</p>
+              </div>
+            )}
+
+            {/* Low model canvas */}
+            {modelReady && modelObject && (
+              <CompareCanvas
+                model={modelObject}
+                renderMode={renderMode}
+                showGrid={showGrid}
+                side="center"
+                objFaceData={objFaceData}
+                highlightAutoReport={effectiveAutoReport}
+              />
+            )}
+          </div>
+
+          {/* ViewerToolbar at bottom */}
+          {modelReady && (
+            <div className="flex justify-center pb-3 pt-1 shrink-0">
+              <ViewerToolbar horizontal showActions={false} />
+            </div>
+          )}
+        </div>
+
+              {/* ===== Right: Analysis Panel ===== */}
       <div className="w-[430px] shrink-0 border-l border-black/5 glass overflow-y-auto">
         <div className="p-5 pb-8 space-y-5">
           {/* Model name + meta */}
@@ -647,6 +712,7 @@ export function ReportPage() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )

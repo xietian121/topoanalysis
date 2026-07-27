@@ -6,7 +6,7 @@ import * as THREE from 'three'
 import { cameraSync } from '@/lib/cameraSync'
 
 interface SyncedOrbitControlsProps {
-  side: 'left' | 'right'
+  side: 'left' | 'center' | 'right'
 }
 
 /**

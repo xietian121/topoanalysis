@@ -11,7 +11,7 @@ interface CompareSceneProps {
   model: THREE.Group | null
   renderMode: RenderMode
   showGrid: boolean
-  side: 'left' | 'right'
+  side: 'left' | 'center' | 'right'
   /** Material overrides */
   materialColor?: string
   materialRoughness?: number

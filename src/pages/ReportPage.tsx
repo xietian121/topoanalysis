@@ -13,6 +13,7 @@ import { useHighlightStore } from '@/stores/highlightStore'
 import { useLoadingStore } from '@/stores/loadingStore'
 import { generateAIAnalysis } from '@/lib/ai-analysis'
 import type { AIAnalysisResult } from '@/lib/ai-analysis'
+import { generateSuggestions } from '@/lib/suggestion-engine'
 import { getExampleRecords, getExampleDefs } from '@/data/example-models'
 import { getStandardByType } from '@/data/evaluation-standards'
 import { RadarChart } from '@/components/evaluation/RadarChart'
@@ -148,6 +149,17 @@ export function ReportPage() {
             isExample: record.isExample,
           })
 
+          // Compute runtime autoReport for example models (needed for AI analysis + dimension details)
+          if (record.isExample) {
+            const { setAutoReport } = useEvalStore.getState()
+            const { modelObject: loadedModel, objFaceData: loadedFaceData } = useModelStore.getState()
+            if (loadedModel) {
+              const { analyzeTopology } = await import('@/lib/topology-analyzer')
+              const report = analyzeTopology(loadedModel, loadedFaceData)
+              setAutoReport(report)
+            }
+          }
+
           // Load reference high model for example models
           if (record.isExample) {
             try {
@@ -274,7 +286,18 @@ export function ReportPage() {
   const ratio = record.maxTotal > 0 ? record.total / record.maxTotal : 0
   const gradeColor = ratio < 0.4 ? 'text-red-500' : ratio < 0.7 ? 'text-amber-500' : 'text-emerald-500'
   const gradeLabel = ratio < 0.4 ? '需改进' : ratio < 0.7 ? '良好' : '优秀'
-  const suggestions = record.suggestions
+  // 示例模型没有预存 suggestions，运行时根据评分生成
+  const suggestions = useMemo(() => {
+    if (record.suggestions) return record.suggestions
+    if (!effectiveAutoReport && !record.autoReport) return undefined
+    if (!record.reviewScores || Object.keys(record.reviewScores).length === 0) return undefined
+    return generateSuggestions({
+      evaluationType: record.evaluationType,
+      autoReport: record.autoReport || effectiveAutoReport,
+      dimensionScores: record.dimensionScores,
+      reviewScores: record.reviewScores,
+    })
+  }, [record, effectiveAutoReport])
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`

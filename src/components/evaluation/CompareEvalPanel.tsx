@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback, useRef, useState } from 'react'
+import { useEffect, useMemo, useCallback, useState } from 'react'
 import { Save, ListChecks } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -8,7 +8,7 @@ import { useCompareStore } from '@/stores/compareStore'
 import { useEvalHistoryStore, type EvalHistoryRecord } from '@/stores/evalHistoryStore'
 import { useEvalFlowStore, isAllScored, computeFlowTotal, type FlattenedCriterion } from '@/stores/evalFlowStore'
 import { useHighlightStore } from '@/stores/highlightStore'
-import { useViewerStore } from '@/stores/viewerStore'
+
 import { analyzeTopology } from '@/lib/topology-analyzer'
 import { getStandardByType } from '@/data/evaluation-standards'
 import { MODEL_TYPE_LABELS, type EvaluationType } from '@/types/evaluation'
@@ -40,8 +40,6 @@ export function CompareEvalPanel() {
   const flowSetScore = useEvalFlowStore((s) => s.setScore)
   const flowFinish = useEvalFlowStore((s) => s.finishFlow)
   const setHighlight = useHighlightStore((s) => s.setCriterion)
-  const setRenderMode = useViewerStore((s) => s.setRenderMode)
-  const prevRenderMode = useRef<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   // Sync expandedId with flow currentIndex when navigating via prev/next buttons
@@ -61,16 +59,7 @@ export function CompareEvalPanel() {
     const c = flowCriteria[flowCurrentIndex]
     if (!c || !isFlowActive) return
     setHighlight(c.id)
-    if (c.id === 'density') {
-      if (prevRenderMode.current === null) {
-        prevRenderMode.current = useViewerStore.getState().settings.renderMode
-      }
-      setRenderMode('solid')
-    } else if (prevRenderMode.current !== null) {
-      setRenderMode(prevRenderMode.current as 'solid' | 'wireframe' | 'wireframe-solid')
-      prevRenderMode.current = null
-    }
-  }, [flowCurrentIndex, flowCriteria, isFlowActive, setHighlight, setRenderMode])
+  }, [flowCurrentIndex, flowCriteria, isFlowActive, setHighlight])
 
   // Clear highlight when flow closes
   useEffect(() => {

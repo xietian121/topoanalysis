@@ -200,7 +200,7 @@ export function FlowReviewCard({
                 active
                   ? 'bg-accent text-white shadow-sm scale-105'
                   : isZero && currentScore === 0
-                    ? 'bg-red-500 text-white shadow-sm scale-105'
+                    ? 'bg-accent text-white shadow-sm scale-105'
                     : 'bg-black/[0.04] text-text-tertiary hover:bg-black/[0.08] hover:text-text-secondary'
               }`}
               title={`${s}分`}
@@ -211,7 +211,7 @@ export function FlowReviewCard({
         })}
       </div>
       <div className="text-center">
-        <span className={`mono text-sm font-bold ${currentScore > 0 ? 'text-accent' : currentScore === 0 ? 'text-red-500' : 'text-text-tertiary'}`}>
+        <span className={`mono text-sm font-bold ${currentScore > 0 ? 'text-accent' : currentScore === 0 ? 'text-accent' : 'text-text-tertiary'}`}>
           {currentScore > 0 ? `${currentScore}/10` : currentScore === 0 ? '0/10' : '未打分'}
         </span>
         <span className="text-[10px] text-text-tertiary ml-2">

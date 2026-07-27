@@ -35,14 +35,22 @@ export function ViewerPage() {
 
   // 结构跟随性叠加模式
   const isStructureMode = criterionId === 'structure' && referenceModel !== null
-  const prevRenderMode = useRef<typeof renderMode>('solid')
+  const prevRenderMode = useRef<typeof renderMode>('wireframe-solid')
+  const hasEnteredStructure = useRef(false)
+
+  // 进入打分页 → 低模默认混合模式
+  useEffect(() => {
+    setRenderMode('wireframe-solid')
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // 进入结构跟随性时自动切到混合模式，离开时恢复
   useEffect(() => {
     if (isStructureMode) {
+      hasEnteredStructure.current = true
       prevRenderMode.current = renderMode
       setRenderMode('wireframe-solid')
-    } else {
+    } else if (hasEnteredStructure.current) {
+      // 只有真正进出过 structure 才恢复，避免挂载时覆盖默认混合模式
       setRenderMode(prevRenderMode.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

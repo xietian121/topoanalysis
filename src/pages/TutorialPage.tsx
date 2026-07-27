@@ -494,6 +494,10 @@ export function TutorialPage() {
                   labelDesc={excellentModel.name}
                 />
               )}
+              {/* 悬浮工具栏 — 放在右侧视口内，不遮挡中间面板 */}
+              <div className="absolute bottom-3 right-3 z-40">
+                <ViewerToolbar horizontal showActions={false} />
+              </div>
             </div>
             <div className="h-10 flex items-center justify-center glass border-t border-black/5 shrink-0 gap-2">
               <span className={`mono text-[20px] font-bold ${excGrade.color}`}>{excTotal.toFixed(1)}</span>
@@ -502,10 +506,6 @@ export function TutorialPage() {
             </div>
           </div>
 
-          {/* ── Floating toolbar ── */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40">
-            <ViewerToolbar horizontal showActions={false} />
-          </div>
         </div>
       )}
     </div>

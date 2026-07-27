@@ -697,40 +697,29 @@ export function detectEdgeLoops(faceData: OBJFaceData | null): EdgeLoopResult | 
   }
 
   // ── Step 2: For each edge, precompute the "opposite edge" at each endpoint ──
-  // opposite[a] = the edge key that continues straight through vertex vi0
-  interface EdgeContinuation {
-    at0: string | null  // continuation through vi0
-    at1: string | null  // continuation through vi1
-  }
-  const continuations = new Map<string, EdgeContinuation>()
+  // Keyed by vertex INDEX (not by ordering), so the walk can look up by absolute index.
+  // Format: continuations[edgeKey] → Map(vertexIndex → oppositeEdgeKey)
+  const continuations = new Map<string, Map<number, string>>()
 
-  function findOppositeAtVertex(ek: string, atVertex: number, _otherVertex: number): string | null {
-    // Faces that contain this edge
+  function findOppositeAtVertex(ek: string, atVertex: number): string | null {
     const facesWithEdge = edgeFaces.get(ek)
     if (!facesWithEdge || facesWithEdge.length === 0) return null
 
-    // Edges incident to atVertex
     const edgesAtVertex = vertexEdges.get(atVertex)
     if (!edgesAtVertex) return null
 
-    // The "opposite" edge is the one that is NOT in any face containing BOTH
-    // vertices of the incoming edge. I.e., it shares NO face with the incoming edge.
     for (const candidateKey of edgesAtVertex) {
       if (candidateKey === ek) continue
 
-      // Parse the candidate edge to find the other vertex
       const [s0, s1] = candidateKey.split('|')
       const cv0 = parseInt(s0, 10)
       const cv1 = parseInt(s1, 10)
 
-      // Both candidate and incoming edge must share atVertex
       if (cv0 !== atVertex && cv1 !== atVertex) continue
 
-      // Faces that contain candidate edge
       const facesWithCandidate = edgeFaces.get(candidateKey)
       if (!facesWithCandidate) continue
 
-      // Check if any face contains BOTH edges
       let sharesFace = false
       for (const fid of facesWithEdge) {
         if (facesWithCandidate.includes(fid)) {
@@ -748,10 +737,13 @@ export function detectEdgeLoops(faceData: OBJFaceData | null): EdgeLoopResult | 
   }
 
   for (const { key: ek, vi0, vi1 } of allEdges) {
-    const opp0 = findOppositeAtVertex(ek, vi0, vi1)
-    const opp1 = findOppositeAtVertex(ek, vi1, vi0)
-    if (opp0 || opp1) {
-      continuations.set(ek, { at0: opp0, at1: opp1 })
+    const opp0 = findOppositeAtVertex(ek, vi0)
+    const opp1 = findOppositeAtVertex(ek, vi1)
+    const map = new Map<number, string>()
+    if (opp0) map.set(vi0, opp0)
+    if (opp1) map.set(vi1, opp1)
+    if (map.size > 0) {
+      continuations.set(ek, map)
     }
   }
 
@@ -762,43 +754,32 @@ export function detectEdgeLoops(faceData: OBJFaceData | null): EdgeLoopResult | 
   for (const { key: startKey, vi0, vi1 } of allEdges) {
     if (visited.has(startKey)) continue
 
-    const startCont = continuations.get(startKey)
-    if (!startCont || (!startCont.at0 && !startCont.at1)) {
+    const startMap = continuations.get(startKey)
+    if (!startMap || startMap.size === 0) {
       visited.add(startKey)
       continue
     }
 
     // Try walking in both directions from start
-    for (const initialDir of [0, 1] as const) {
-      const firstCont = initialDir === 0 ? startCont.at1 : startCont.at0
+    const startVerts = [vi0, vi1]
+    for (const dir of [0, 1] as const) {
+      const exitVertex = startVerts[dir]
+      const firstCont = startMap.get(exitVertex)
       if (!firstCont) continue
-      if (visited.has(startKey)) break // already found a loop containing this edge
+      if (visited.has(startKey)) break
 
       const walk: string[] = [startKey]
 
-      // Determine which vertex of startKey connects to firstCont
-      const startVerts = initialDir === 0 ? [vi0, vi1] : [vi1, vi0]
       let currentKey = startKey
-      let currentVertex = startVerts[1] // the vertex we walk THROUGH
+      let currentVertex = exitVertex
 
       let closed = false
 
       while (true) {
-        const cont = continuations.get(currentKey)
-        if (!cont) break
+        const map = continuations.get(currentKey)
+        if (!map) break
 
-        // Which continuation to use depends on which vertex we just passed through
-        let nextKey: string | null = null
-        const [s0, s1] = currentKey.split('|')
-        const cv0 = parseInt(s0, 10)
-        const cv1 = parseInt(s1, 10)
-
-        if (currentVertex === cv0) {
-          nextKey = cont.at0
-        } else if (currentVertex === cv1) {
-          nextKey = cont.at1
-        }
-
+        const nextKey = map.get(currentVertex)
         if (!nextKey) break
         if (nextKey === startKey) {
           closed = true
@@ -808,13 +789,12 @@ export function detectEdgeLoops(faceData: OBJFaceData | null): EdgeLoopResult | 
 
         walk.push(nextKey)
 
-        // Determine which vertex of nextKey we just entered
+        // Walked through currentVertex to nextKey. Find the OTHER endpoint of nextKey.
         const [n0, n1] = nextKey.split('|')
         const nv0 = parseInt(n0, 10)
         const nv1 = parseInt(n1, 10)
-
-        // We entered nextKey through currentVertex, so the other vertex is where we exit
         const otherVertex = currentVertex === nv0 ? nv1 : nv0
+
         currentKey = nextKey
         currentVertex = otherVertex
       }

@@ -311,7 +311,7 @@ export function CompareReportPage() {
         <section>
           <h2 className="text-[14px] font-semibold tracking-[-0.01em] flex items-center gap-2 mb-3">
             <Sparkles className="h-4 w-4 text-accent" />
-            AI 对比分析
+            对比分析
             <span className="text-[10px] font-normal text-text-tertiary">DeepSeek</span>
           </h2>
 
@@ -319,7 +319,7 @@ export function CompareReportPage() {
             <Card>
               <CardContent className="p-6 flex flex-col items-center gap-3">
                 <Loader2 className="h-6 w-6 text-accent animate-spin" />
-                <p className="text-[13px] text-text-secondary">AI 正在对比分析两个模型...</p>
+                <p className="text-[13px] text-text-secondary">正在对比分析两个模型...</p>
                 <p className="text-[11px] text-text-tertiary">通常需要 10-20 秒，请耐心等待</p>
               </CardContent>
             </Card>
@@ -331,7 +331,7 @@ export function CompareReportPage() {
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-[12px] font-medium text-text-primary">AI 对比分析暂时不可用</p>
+                    <p className="text-[12px] font-medium text-text-primary">对比分析暂时不可用</p>
                     <p className="text-[11px] text-text-tertiary mt-1">{aiError}</p>
                     <button
                       onClick={() => {
@@ -375,7 +375,7 @@ export function CompareReportPage() {
                     className="inline-flex items-center gap-1 text-[10px] text-text-tertiary hover:text-accent transition-colors"
                   >
                     <RefreshCw className="h-3 w-3" />
-                    重新生成
+                    再次分析
                   </button>
                 </div>
               </CardContent>

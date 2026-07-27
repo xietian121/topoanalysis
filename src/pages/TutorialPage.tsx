@@ -395,7 +395,7 @@ export function TutorialPage() {
                 >
                   <h3 className="text-[12px] font-semibold text-text-primary flex items-center gap-1.5">
                     <Sparkles className="h-3.5 w-3.5 text-accent" />
-                    AI 深度对比分析
+                    深度对比分析
                   </h3>
                   {showAI ? <ChevronDown className="h-3.5 w-3.5 text-text-tertiary" /> : <ChevronRight className="h-3.5 w-3.5 text-text-tertiary" />}
                 </button>
@@ -405,7 +405,7 @@ export function TutorialPage() {
                     {aiLoading && (
                       <div className="flex items-center gap-2 py-3 px-3 rounded-lg bg-black/[0.02]">
                         <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" />
-                        <span className="text-[12px] text-text-tertiary">AI 正在对比分析...</span>
+                        <span className="text-[12px] text-text-tertiary">正在对比分析...</span>
                       </div>
                     )}
                     {aiError && !aiLoading && (
@@ -453,7 +453,7 @@ export function TutorialPage() {
                           className="flex items-center gap-1.5 text-[11px] text-text-tertiary hover:text-accent transition-colors"
                         >
                           <RefreshCw className="h-3 w-3" />
-                          重新生成
+                          再次分析
                         </button>
                       </div>
                     )}

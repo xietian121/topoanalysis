@@ -532,7 +532,7 @@ export function ReportPage() {
           <section>
             <h2 className="text-[13px] font-semibold tracking-[-0.01em] flex items-center gap-2 mb-3">
               <Sparkles className="h-3.5 w-3.5 text-accent" />
-              AI 深度分析
+              深度分析
               <span className="text-[10px] font-normal text-text-tertiary">DeepSeek</span>
             </h2>
 
@@ -541,7 +541,7 @@ export function ReportPage() {
               <Card>
                 <CardContent className="p-6 flex flex-col items-center gap-3">
                   <Loader2 className="h-6 w-6 text-accent animate-spin" />
-                  <p className="text-[13px] text-text-secondary">AI 正在分析模型拓扑数据...</p>
+                  <p className="text-[13px] text-text-secondary">正在分析模型拓扑数据...</p>
                   <p className="text-[11px] text-text-tertiary">通常需要 5-15 秒，请耐心等待</p>
                 </CardContent>
               </Card>
@@ -554,7 +554,7 @@ export function ReportPage() {
                   <div className="flex items-start gap-2.5">
                     <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-[12px] font-medium text-text-primary">AI 分析暂时不可用</p>
+                      <p className="text-[12px] font-medium text-text-primary">深度分析暂时不可用</p>
                       <p className="text-[11px] text-text-tertiary mt-1">{aiError}</p>
                       <button
                         onClick={() => {
@@ -612,7 +612,7 @@ export function ReportPage() {
                       className="inline-flex items-center gap-1 text-[10px] text-text-tertiary hover:text-accent transition-colors"
                     >
                       <RefreshCw className="h-3 w-3" />
-                      重新生成
+                      再次分析
                     </button>
                   </div>
                 </CardContent>

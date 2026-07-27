@@ -21,6 +21,7 @@ export function ScoringHeader() {
   const modelText = useModelStore((s) => s.modelText)
   const autoReport = useEvalStore((s) => s.autoReport)
   const evaluationType = useEvalStore((s) => s.evaluationType)
+  const symmetryEnabled = useEvalStore((s) => s.symmetryEnabled)
   const setFlowResult = useEvalStore((s) => s.setFlowResult)
   const flowCriteria = useEvalFlowStore((s) => s.criteria)
   const flowScores = useEvalFlowStore((s) => s.reviewScores)
@@ -64,7 +65,7 @@ export function ScoringHeader() {
       setFlowResult({ ...flowScores }, total)
 
       // Generate suggestions
-      const standard = getStandardByType(evaluationType)  // 对称性由父组件控制
+      const standard = getStandardByType(evaluationType, symmetryEnabled)
       const dimScores = standard.dimensions.map((dim) => {
         let score = 0
         for (const crit of dim.criteria) {
@@ -111,6 +112,7 @@ export function ScoringHeader() {
         manualRatings: {},
         reviewScores: flowScores,
         suggestions,
+        symmetryEnabled: symmetryEnabled || undefined,
         evalStatus: 'completed',
         modelText: modelText ?? undefined,
         modelInfoSnapshot: currentModel,
@@ -133,7 +135,7 @@ export function ScoringHeader() {
       setSubmitting(false)
     }
   }, [
-    currentModel, autoReport, evaluationType, allScored, allCriteria, flowScores,
+    currentModel, autoReport, evaluationType, symmetryEnabled, allScored, allCriteria, flowScores,
     setFlowResult, addRecord, finishFlow, navigate, setHighlight, modelText, addToast,
   ])
 

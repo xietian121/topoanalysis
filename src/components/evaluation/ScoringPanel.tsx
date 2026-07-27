@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useCallback, useState } from 'react'
+import { useEffect, useMemo, useCallback, useState, useRef } from 'react'
 import { ListChecks } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useEvalStore } from '@/stores/evalStore'
 import { useModelStore } from '@/stores/modelStore'
+import { useViewerStore } from '@/stores/viewerStore'
 import { useEvalFlowStore, computeFlowTotal, isAllScored, type FlattenedCriterion } from '@/stores/evalFlowStore'
 import { useHighlightStore } from '@/stores/highlightStore'
 
@@ -16,6 +17,8 @@ export function ScoringPanel() {
   const modelObject = useModelStore((s) => s.modelObject)
   const objFaceData = useModelStore((s) => s.objFaceData)
   const evaluationType = useEvalStore((s) => s.evaluationType)
+  const symmetryEnabled = useEvalStore((s) => s.symmetryEnabled)
+  const setSymmetryEnabled = useEvalStore((s) => s.setSymmetryEnabled)
   const setAutoReport = useEvalStore((s) => s.setAutoReport)
   const resetFlowResult = useEvalStore((s) => s.resetFlowResult)
   const autoReport = useEvalStore((s) => s.autoReport)
@@ -29,8 +32,11 @@ export function ScoringPanel() {
   const flowGoTo = useEvalFlowStore((s) => s.goTo)
   const flowSetScore = useEvalFlowStore((s) => s.setScore)
   const flowFinish = useEvalFlowStore((s) => s.finishFlow)
+  const cancelFlow = useEvalFlowStore((s) => s.cancelFlow)
   const setHighlight = useHighlightStore((s) => s.setCriterion)
+  const setShowSymmetry = useViewerStore((s) => s.setShowSymmetry)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const symmetryToggleRef = useRef(false)
 
   // Sync expandedId with flow currentIndex when navigating via prev/next buttons
   useEffect(() => {
@@ -39,9 +45,15 @@ export function ScoringPanel() {
     }
   }, [isFlowActive, flowCurrentIndex, flowCriteria])
 
-  // Clear expanded when flow closes
+  // Clear expanded when flow closes (unless symmetry was toggled)
   useEffect(() => {
-    if (!isFlowActive) setExpandedId(null)
+    if (!isFlowActive) {
+      if (symmetryToggleRef.current) {
+        symmetryToggleRef.current = false
+        return
+      }
+      setExpandedId(null)
+    }
   }, [isFlowActive])
 
   // Sync highlight to current criterion + auto-switch render mode for density
@@ -70,7 +82,7 @@ export function ScoringPanel() {
     }
   }, [modelObject, objFaceData, setAutoReport, resetEval])
 
-  const standard = getStandardByType(evaluationType)  // 对称性由父组件 EvalPanel 控制
+  const standard = getStandardByType(evaluationType, symmetryEnabled)
 
   // Derive full criteria list from standard
   const allCriteria = useMemo(() => {
@@ -82,6 +94,7 @@ export function ScoringPanel() {
         maxScore: c.maxScore,
         method: c.method,
         dimensionName: dim.name,
+        optional: c.optional,
       })),
     )
   }, [standard])
@@ -98,6 +111,7 @@ export function ScoringPanel() {
         method: c.method,
         dimensionName: dim.name,
         scoringRule: c.scoringRule,
+        optional: c.optional,
       })),
     )
     startFlow(flattened)
@@ -150,7 +164,6 @@ export function ScoringPanel() {
           </>
         )}
 
-        {/* Criteria list — only shows when flow is active or after start */}
         {autoReport && (
           <section>
             <h4 className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">
@@ -171,7 +184,9 @@ export function ScoringPanel() {
                   d.criteria.some((c) => c.id === crit.id),
                 )
                 const dimColor = ['#4a90d9', '#34c759', '#ff9500', '#af52de'][dimIdx] ?? '#4a90d9'
-                const canClick = isFlowActive
+                const isOptional = crit.optional === true
+                const isOptDisabled = isOptional && !symmetryEnabled
+                const canClick = isFlowActive || isOptional
                 return (
                   <div key={crit.id}>
                     <button
@@ -181,39 +196,41 @@ export function ScoringPanel() {
                           setExpandedId(null)
                         } else {
                           setExpandedId(crit.id)
-                          flowGoTo(idx)
+                          if (isFlowActive && !isOptDisabled) flowGoTo(idx)
                         }
                       }}
                       className={`w-full text-left rounded-lg px-3 py-2 transition-all duration-150 ${
                         canClick
                           ? isCurrent
                             ? 'bg-accent/[0.08] border-l-[3px] border-accent pl-[9px] hover:bg-accent/[0.12]'
-                            : 'border-l-[3px] border-transparent pl-[9px] hover:bg-black/[0.04] cursor-pointer'
+                            : isOptDisabled
+                              ? 'border-l-[3px] border-transparent pl-[9px] hover:bg-black/[0.04] cursor-pointer opacity-60'
+                              : 'border-l-[3px] border-transparent pl-[9px] hover:bg-black/[0.04] cursor-pointer'
                           : 'border-l-[3px] border-transparent pl-[9px] cursor-default'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className={`text-[12px] font-medium truncate ${
-                          isCurrent ? 'text-accent' : 'text-text-primary'
+                          isCurrent ? 'text-accent' : isOptDisabled ? 'text-text-tertiary' : 'text-text-primary'
                         }`}>
                           {crit.name}
                         </span>
                         <span className={`mono text-[11px] ml-2 shrink-0 ${
                           score > 0 ? 'text-accent font-semibold' : 'text-text-tertiary'
                         }`}>
-                          {score}/10
+                          {isOptDisabled ? '—' : `${score}/10`}
                         </span>
                       </div>
                       {/* Slider bar */}
                       <div className="h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-300"
-                          style={{ width: `${pct}%`, backgroundColor: score > 0 ? dimColor : 'transparent' }}
+                          style={{ width: `${isOptDisabled ? 0 : pct}%`, backgroundColor: score > 0 ? dimColor : 'transparent' }}
                         />
                       </div>
                       {/* Dimension name + criterion weight */}
                       <p className="text-[10px] text-text-tertiary mt-1 truncate">
-                        {crit.dimensionName} · 满分 {crit.maxScore} 分
+                        {crit.dimensionName}{isOptional ? ' · 可选模块' : ` · 满分 ${crit.maxScore} 分`}
                       </p>
                     </button>
                     {/* Animated expand/collapse */}
@@ -242,6 +259,19 @@ export function ScoringPanel() {
                             autoReport={autoReport}
                             scoredCount={Object.keys(flowScores).length}
                             totalCount={allCriteria.length}
+                            optional={isOptional}
+                            optionalEnabled={symmetryEnabled}
+                            onToggleOptional={(v) => {
+                              // 切换对称性时，若 flow 已激活则先重置（准则权重已变更）
+                              if (isFlowActive) {
+                                symmetryToggleRef.current = true
+                                cancelFlow()
+                                resetFlowResult()
+                                setHighlight(null)
+                              }
+                              setSymmetryEnabled(v)
+                              setShowSymmetry(v)
+                            }}
                           />
                         </div>
                       </div>

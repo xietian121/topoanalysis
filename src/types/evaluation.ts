@@ -69,6 +69,8 @@ export interface EvaluationCriterion {
   /** 评分规则简要说明（一句话公式，展示在评测卡片中） */
   scoringRule?: string
   subItems?: { name: string; description: string }[]
+  /** 是否为可选准则（如对称性），需用户手动启用后才可打分 */
+  optional?: boolean
 }
 
 export interface EvaluationDimension {

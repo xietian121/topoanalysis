@@ -141,15 +141,15 @@ export function ViewerScene({
       ) : (
         <>
           {/* Normal mode: single model */}
-          {model && <LoadedModel model={model} renderMode={renderMode} />}
+          {model && <LoadedModel model={model} renderMode={renderMode} groundY={-2} />}
         </>
       )}
 
       {/* Highlight overlay — only in normal mode */}
-      {model && !isStructureMode && <HighlightOverlay model={model} singleModel />}
+      {model && !isStructureMode && <HighlightOverlay model={model} singleModel groundY={-2} />}
 
       {/* Symmetry guide */}
-      {model && !isStructureMode && <SymmetryGuide model={model} />}
+      {model && !isStructureMode && <SymmetryGuide model={model} groundY={-2} />}
     </>
   )
 }

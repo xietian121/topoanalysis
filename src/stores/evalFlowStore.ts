@@ -10,6 +10,8 @@ export interface FlattenedCriterion {
   dimensionName: string
   /** 评分规则简要说明 */
   scoringRule?: string
+  /** 是否为可选准则（如对称性），需用户手动启用后才可打分 */
+  optional?: boolean
 }
 
 interface EvalFlowStore {
@@ -67,7 +69,11 @@ export function isAllScored(
   criteria: FlattenedCriterion[],
   reviewScores: Record<string, number>,
 ): boolean {
-  return criteria.every((c) => c.id in reviewScores)
+  return criteria.every((c) => {
+    // 跳过未启用的可选准则（maxScore === 0 表示未启用）
+    if (c.optional && c.maxScore === 0) return true
+    return c.id in reviewScores
+  })
 }
 
 /**

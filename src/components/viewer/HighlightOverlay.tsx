@@ -18,6 +18,8 @@ interface HighlightOverlayProps {
   singleModel?: boolean
   /** External autoReport override — used when multiple viewports need different highlight data */
   autoReportOverride?: TopologyReport | null
+  /** Place model bottom at this Y. Must match LoadedModel's groundY. */
+  groundY?: number
 }
 
 const HIGHLIGHT_COLORS: Record<string, string> = {
@@ -61,7 +63,7 @@ function getCircleTexture(): THREE.Texture {
  * Compute the same centering + scaling transform that LoadedModel applies.
  * This ensures highlight geometry aligns with the rendered model.
  */
-function getModelNormalization(model: THREE.Group): {
+function getModelNormalization(model: THREE.Group, groundY?: number): {
   position: [number, number, number]
   scale: number
 } {
@@ -76,13 +78,18 @@ function getModelNormalization(model: THREE.Group): {
   if (maxDim > 0 && maxDim < 0.5) scale = 4 / maxDim
   else if (maxDim > 20) scale = 4 / maxDim
 
+  let posY = -center.y
+  if (groundY !== undefined) {
+    posY = -center.y + groundY / scale + size.y / 2
+  }
+
   return {
-    position: [-center.x, -center.y, -center.z],
+    position: [-center.x, posY, -center.z],
     scale,
   }
 }
 
-export function HighlightOverlay({ model, objFaceData, singleModel, autoReportOverride }: HighlightOverlayProps) {
+export function HighlightOverlay({ model, objFaceData, singleModel, autoReportOverride, groundY }: HighlightOverlayProps) {
   const criterionId = useHighlightStore((s) => s.criterionId)
   const storeAutoReport = useEvalStore((s) => s.autoReport)
   const singleObjFaceData = useModelStore((s) => s.objFaceData)
@@ -99,8 +106,8 @@ export function HighlightOverlay({ model, objFaceData, singleModel, autoReportOv
   // Compute the same normalization transform that LoadedModel uses
   const normalization = useMemo(() => {
     if (!effectiveModel) return null
-    return getModelNormalization(effectiveModel)
-  }, [effectiveModel])
+    return getModelNormalization(effectiveModel, groundY)
+  }, [effectiveModel, groundY])
 
   const data = useMemo(() => {
     console.log('[Highlight] criterionId:', criterionId, 'model:', !!effectiveModel, 'faceData:', !!effectiveFaceData, 'report:', !!autoReport)

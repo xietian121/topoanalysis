@@ -21,6 +21,8 @@ interface LoadedModelProps {
   opacity?: number
   /** Use this model's bounding box for centering+scaling instead of own */
   normalizationFrom?: THREE.Group | null
+  /** Place model bottom at this Y position (disables geometric Y-centering). Default: center at origin. */
+  groundY?: number
 }
 
 function buildLinesFromOBJ(faces: number[][], globalPositions: number[]): THREE.LineSegments {
@@ -68,6 +70,7 @@ export function LoadedModel({
   forceSolid,
   opacity,
   normalizationFrom,
+  groundY,
 }: LoadedModelProps) {
   const storeColor = useViewerStore((s) => s.settings.materialColor)
   const storeRoughness = useViewerStore((s) => s.settings.materialRoughness)
@@ -94,16 +97,25 @@ export function LoadedModel({
     box.getSize(size)
     const maxDim = Math.max(size.x, size.y, size.z)
 
+    let s = 1
+    if (maxDim > 0 && maxDim < 0.5) s = 4 / maxDim
+    else if (maxDim > 20) s = 4 / maxDim
+
+    // Y: if groundY provided and not overlay mode, place model bottom on groundY
+    let posY = -center.y
+    if (!normalizationFrom && groundY !== undefined) {
+      posY = -center.y + groundY / s + size.y / 2
+    }
+
     const root = new THREE.Group()
     root.name = 'ModelRoot'
-    clone.position.set(-center.x, -center.y, -center.z)
+    clone.position.set(-center.x, posY, -center.z)
     root.add(clone)
 
-    if (maxDim > 0 && maxDim < 0.5) root.scale.setScalar(4 / maxDim)
-    else if (maxDim > 20) root.scale.setScalar(4 / maxDim)
+    if (s !== 1) root.scale.setScalar(s)
 
     return root
-  }, [model, normalizationFrom])
+  }, [model, normalizationFrom, groundY])
 
   // Solid material
   useEffect(() => {

@@ -108,6 +108,7 @@ export function CompareScene({
               materialRoughness={materialRoughness}
               materialMetalness={materialMetalness}
               forceSolid={forceSolid}
+              groundY={-2}
             />
           )}
         </>
@@ -119,11 +120,11 @@ export function CompareScene({
         ? highlightAutoReport !== null
         : side === 'right'
       ) && (
-        <HighlightOverlay model={model} objFaceData={objFaceData} autoReportOverride={highlightAutoReport} />
+        <HighlightOverlay model={model} objFaceData={objFaceData} autoReportOverride={highlightAutoReport} groundY={-2} />
       )}
 
-      {/* Symmetry guide — only on center (low model) viewport */}
-      {side === 'center' && <SymmetryGuide model={model} />}
+      {/* Symmetry guide */}
+      {model && !overlayModel && <SymmetryGuide model={model} groundY={-2} />}
     </>
   )
 }

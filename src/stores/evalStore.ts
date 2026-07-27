@@ -14,6 +14,8 @@ export const RATING_PCTS: Record<RatingLevel, number> = {
 interface EvalStore {
   /** Phase 2: 评测标准类型组合键 */
   evaluationType: EvaluationType
+  /** 是否启用对称性评测 */
+  symmetryEnabled: boolean
   autoReport: TopologyReport | null
   manualRatings: Record<string, RatingLevel>
   /** Flow-based review scores (criterionId → 1-10), null if not using flow */
@@ -23,6 +25,7 @@ interface EvalStore {
   flowSaved: boolean
 
   setEvaluationType: (t: EvaluationType) => void
+  setSymmetryEnabled: (v: boolean) => void
   setAutoReport: (report: TopologyReport | null) => void
   setManualRating: (criterionId: string, level: RatingLevel) => void
   setFlowResult: (scores: Record<string, number>, total: number) => void
@@ -34,6 +37,7 @@ interface EvalStore {
 
 export const useEvalStore = create<EvalStore>()((set) => ({
   evaluationType: 'game-static',
+  symmetryEnabled: false,
   autoReport: null,
   manualRatings: {},
   flowReviewScores: null,
@@ -41,6 +45,7 @@ export const useEvalStore = create<EvalStore>()((set) => ({
   flowSaved: false,
 
   setEvaluationType: (evaluationType) => set({ evaluationType }),
+  setSymmetryEnabled: (symmetryEnabled) => set({ symmetryEnabled }),
   setAutoReport: (autoReport) => set({ autoReport }),
   setManualRating: (criterionId, level) =>
     set((s) => ({ manualRatings: { ...s.manualRatings, [criterionId]: level } })),
@@ -120,8 +125,9 @@ export function computeTotalScore(
   evaluationType: EvaluationType,
   report: TopologyReport | null,
   manualRatings: Record<string, RatingLevel>,
+  symmetryEnabled = false,
 ): { autoTotal: number; manualTotal: number; total: number; maxTotal: number } {
-  const standard: EvaluationStandard = getStandardByType(evaluationType)
+  const standard: EvaluationStandard = getStandardByType(evaluationType, symmetryEnabled)
 
   let autoTotal = 0
   let manualTotal = 0

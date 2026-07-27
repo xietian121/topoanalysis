@@ -615,25 +615,33 @@ const SYMMETRY_CONFIG: Record<EvaluationType, {
  */
 export function getStandardByType(type: EvaluationType, symmetryEnabled = false): EvaluationStandard {
   const base = EVALUATION_STANDARDS[type]
-  if (!symmetryEnabled) return base
-
   const cfg = SYMMETRY_CONFIG[type]
 
   return {
     ...base,
     dimensions: base.dimensions.map((dim) => {
-      const newWeight = cfg.dimWeights[dim.id]
-      const criteria = dim.criteria.map((crit) => ({
-        ...crit,
-        maxScore: cfg.critMax[crit.id] ?? crit.maxScore,
-      }))
+      // 对称性启用时使用调整后的权重和 maxScore
+      const newWeight = symmetryEnabled ? (cfg.dimWeights[dim.id] ?? dim.weight) : dim.weight
 
-      // edge-flow 维度追加对称性准则
+      const criteria = dim.criteria.map((crit) => {
+        if (symmetryEnabled && cfg.critMax[crit.id] !== undefined) {
+          return { ...crit, maxScore: cfg.critMax[crit.id] }
+        }
+        return crit
+      })
+
+      // edge-flow 维度：始终在最前面插入对称性准则
       if (dim.id === 'edge-flow') {
-        criteria.push({
+        const symCriterion = {
           ...SYMMETRY_CRITERION_BASE,
-          maxScore: cfg.symmetryMax,
-        })
+          maxScore: symmetryEnabled ? cfg.symmetryMax : 0,
+          optional: true,
+        }
+        return {
+          ...dim,
+          weight: newWeight,
+          criteria: [symCriterion, ...criteria],
+        }
       }
 
       return {

@@ -45,15 +45,33 @@ export function generateSuggestions(input: SuggestionInput): EvaluationSuggestio
     }
 
     // Boundary edges (holes)
-    if (boundary.count > 0) {
-      const severity = boundary.count > 10 ? '严重' : '少量'
-      ;(boundary.count > 10 ? critical : warning).push({
-        title: `检测到 ${boundary.count} 条边界边（破洞）`,
-        description: `模型存在 ${boundary.count} 条仅连接一个面的边界边，${severity}影响网格完整性。`,
-        why: '破洞面意味着模型非水密，会导致渲染漏光、阴影异常、3D打印失败及物理碰撞穿透。' + (isAnimation ? '骨骼动画中破洞会因蒙皮变形进一步扩大，产生视觉撕裂。' : ''),
-        howToFix: '使用3D软件的封洞工具（Cap Holes / Fill Holes）填补破洞，或手动创建面片闭合开放区域。优先修复视觉可见和变形区域附近的破洞。',
-        relatedCriterionId: 'boundary-holes',
-      })
+    // 如果逐条审核中 boundary-holes 评分 > 6，说明破洞是建模师有意保留（减少面数），跳过建议
+    // 如果评分 ≤ 6，则始终作为严重问题报告
+    const boundaryScore = input.reviewScores?.['boundary-holes']
+    if (boundaryScore !== undefined) {
+      // 有逐条审核评分：以评分为准
+      if (boundary.count > 0 && boundaryScore <= 6) {
+        critical.push({
+          title: `检测到 ${boundary.count} 条边界边（破洞）— 评分 ${boundaryScore}/10`,
+          description: `模型存在 ${boundary.count} 条仅连接一个面的边界边，审核评分为 ${boundaryScore}/10，属于需重点关注的严重问题。`,
+          why: '破洞面意味着模型非水密，会导致渲染漏光、阴影异常、3D打印失败及物理碰撞穿透。' + (isAnimation ? '骨骼动画中破洞会因蒙皮变形进一步扩大，产生视觉撕裂。' : ''),
+          howToFix: '使用3D软件的封洞工具（Cap Holes / Fill Holes）填补破洞，或手动创建面片闭合开放区域。优先修复视觉可见和变形区域附近的破洞。',
+          relatedCriterionId: 'boundary-holes',
+        })
+      }
+      // boundaryScore > 6: 建模师有意保留，不生成任何建议
+    } else {
+      // 无逐条审核评分：按原有数量逻辑判断
+      if (boundary.count > 0) {
+        const severity = boundary.count > 10 ? '严重' : '少量'
+        ;(boundary.count > 10 ? critical : warning).push({
+          title: `检测到 ${boundary.count} 条边界边（破洞）`,
+          description: `模型存在 ${boundary.count} 条仅连接一个面的边界边，${severity}影响网格完整性。`,
+          why: '破洞面意味着模型非水密，会导致渲染漏光、阴影异常、3D打印失败及物理碰撞穿透。' + (isAnimation ? '骨骼动画中破洞会因蒙皮变形进一步扩大，产生视觉撕裂。' : ''),
+          howToFix: '使用3D软件的封洞工具（Cap Holes / Fill Holes）填补破洞，或手动创建面片闭合开放区域。优先修复视觉可见和变形区域附近的破洞。',
+          relatedCriterionId: 'boundary-holes',
+        })
+      }
     }
 
     // Overlapping faces

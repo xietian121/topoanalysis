@@ -170,12 +170,25 @@ function buildSingleAnalysisPrompt(record: EvalHistoryRecord): string {
 
   let existingSuggestions = ''
   if (record.suggestions) {
+    // 如果 boundary-holes 评分 > 6，从建议中过滤（建模师有意保留的破洞不视为问题）
+    const boundaryScore = record.reviewScores?.['boundary-holes']
+    const filterHoles = boundaryScore !== undefined && boundaryScore > 6
     const parts: string[] = []
     if (record.suggestions.critical.length > 0) {
-      parts.push('规则引擎已识别的严重问题:\n' + record.suggestions.critical.map(s => `- ${s.title}: ${s.description}`).join('\n'))
+      const filtered = filterHoles
+        ? record.suggestions.critical.filter(s => s.relatedCriterionId !== 'boundary-holes')
+        : record.suggestions.critical
+      if (filtered.length > 0) {
+        parts.push('规则引擎已识别的严重问题:\n' + filtered.map(s => `- ${s.title}: ${s.description}`).join('\n'))
+      }
     }
     if (record.suggestions.warning.length > 0) {
-      parts.push('规则引擎已识别的优化建议:\n' + record.suggestions.warning.map(s => `- ${s.title}: ${s.description}`).join('\n'))
+      const filtered = filterHoles
+        ? record.suggestions.warning.filter(s => s.relatedCriterionId !== 'boundary-holes')
+        : record.suggestions.warning
+      if (filtered.length > 0) {
+        parts.push('规则引擎已识别的优化建议:\n' + filtered.map(s => `- ${s.title}: ${s.description}`).join('\n'))
+      }
     }
     existingSuggestions = parts.join('\n\n')
   }

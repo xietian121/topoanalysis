@@ -21,6 +21,8 @@ export interface HighlightResult {
   faces?: HighlightFaceData
   points?: HighlightPointData
   lines?: HighlightLineData
+  /** Loop paths: ordered vertex sequences for thick-line rendering (edge loops) */
+  loopPaths?: Float32Array[]
   /** Vertex positions shared by faces highlight */
   vertexPositions?: Float32Array
   /** RGB per vertex for density gradient (parallel to vertexPositions) */
@@ -187,46 +189,81 @@ function buildDensityColors(
 }
 
 /**
- * Flatten edge loops into line segment positions.
+ * Convert each edge loop into an ordered vertex sequence (polyline).
+ * Uses spatial matching to order edges head-to-tail.
  */
-function buildLoopLinePositions(
+function buildLoopPaths(
   edgeLoops: import('./topology-analyzer').EdgeLoopResult,
-): Float32Array {
-  const positions: number[] = []
-  for (const loop of edgeLoops.loops) {
-    for (const edge of loop.edges) {
-      positions.push(
-        edge.a[0], edge.a[1], edge.a[2],
-        edge.b[0], edge.b[1], edge.b[2],
-      )
-    }
-  }
-  return new Float32Array(positions)
-}
+): Float32Array[] {
+  const EPS = 0.0001
+  const veq = (a: [number, number, number], b: [number, number, number]) =>
+    Math.abs(a[0] - b[0]) < EPS && Math.abs(a[1] - b[1]) < EPS && Math.abs(a[2] - b[2]) < EPS
 
-/**
- * Extract unique vertex positions from edge loops for point markers.
- * Makes the loops more visible (WebGL linewidth is limited to 1 on Windows).
- */
-function buildLoopPointPositions(
-  edgeLoops: import('./topology-analyzer').EdgeLoopResult,
-): Float32Array {
-  const seen = new Set<string>()
-  const positions: number[] = []
-  const key = (v: [number, number, number]) => `${v[0].toFixed(4)},${v[1].toFixed(4)},${v[2].toFixed(4)}`
+  const paths: Float32Array[] = []
 
   for (const loop of edgeLoops.loops) {
-    for (const edge of loop.edges) {
-      for (const v of [edge.a, edge.b]) {
-        const k = key(v)
-        if (!seen.has(k)) {
-          seen.add(k)
-          positions.push(v[0], v[1], v[2])
+    if (loop.edges.length === 0) continue
+
+    // Build ordered vertex list from edges (head-to-tail)
+    const ordered: [number, number, number][] = []
+    const remaining = loop.edges.map((e) => ({
+      a: e.a as [number, number, number],
+      b: e.b as [number, number, number],
+      used: false,
+    }))
+
+    // Start with the first edge
+    remaining[0].used = true
+    ordered.push(remaining[0].a, remaining[0].b)
+
+    // Connect remaining edges
+    let changed = true
+    while (changed) {
+      changed = false
+      const tail = ordered[ordered.length - 1]
+
+      for (const r of remaining) {
+        if (r.used) continue
+        if (veq(r.a, tail)) {
+          r.used = true
+          ordered.push(r.b)
+          changed = true
+          break
+        } else if (veq(r.b, tail)) {
+          r.used = true
+          ordered.push(r.a)
+          changed = true
+          break
         }
       }
     }
+
+    // Add any remaining edges (disconnected sub-loops)
+    for (const r of remaining) {
+      if (!r.used) {
+        ordered.push(r.a, r.b)
+      }
+    }
+
+    if (ordered.length >= 2) {
+      // Close the loop (add first vertex at end for closed polyline)
+      if (veq(ordered[0], ordered[ordered.length - 1])) {
+        // already closed
+      } else {
+        ordered.push(ordered[0])
+      }
+
+      const flat = new Float32Array(ordered.length * 3)
+      for (let i = 0; i < ordered.length; i++) {
+        flat[i * 3] = ordered[i][0]
+        flat[i * 3 + 1] = ordered[i][1]
+        flat[i * 3 + 2] = ordered[i][2]
+      }
+      paths.push(flat)
+    }
   }
-  return new Float32Array(positions)
+
+  return paths
 }
 
 export function getHighlightData(
@@ -362,13 +399,12 @@ export function getHighlightData(
     }
   }
 
-  // Edge-based highlight (loop-edges) — closed edge loops
+  // Edge-based highlight (loop-edges) — closed edge loops as thick polylines
   if (criterionId === 'loop-edges') {
     if (!report.edgeLoops || report.edgeLoops.loops.length === 0) return null
-    return {
-      lines: { positions: buildLoopLinePositions(report.edgeLoops) },
-      points: { positions: buildLoopPointPositions(report.edgeLoops) },
-    }
+    const paths = buildLoopPaths(report.edgeLoops)
+    if (paths.length === 0) return null
+    return { loopPaths: paths }
   }
 
   return null

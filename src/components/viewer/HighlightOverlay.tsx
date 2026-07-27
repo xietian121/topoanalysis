@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
+import { Line } from '@react-three/drei'
 import { useHighlightStore } from '@/stores/highlightStore'
 import { useEvalStore } from '@/stores/evalStore'
 import { useModelStore } from '@/stores/modelStore'
@@ -99,7 +100,7 @@ export function HighlightOverlay({ model, objFaceData, singleModel }: HighlightO
     console.log('[Highlight] criterionId:', criterionId, 'model:', !!effectiveModel, 'faceData:', !!effectiveFaceData, 'report:', !!autoReport)
     if (!criterionId || !effectiveModel || !autoReport) return null
     const result = getHighlightData(criterionId, effectiveModel, effectiveFaceData ?? null, autoReport)
-    console.log('[Highlight] getHighlightData result:', result ? { faces: !!result.faces, points: !!result.points, lines: !!result.lines } : null)
+    console.log('[Highlight] getHighlightData result:', result ? { faces: !!result.faces, points: !!result.points, lines: !!result.lines, loopPaths: result.loopPaths?.length } : null)
     return result
   }, [criterionId, effectiveModel, effectiveFaceData, autoReport])
 
@@ -160,6 +161,31 @@ export function HighlightOverlay({ model, objFaceData, singleModel }: HighlightO
           </mesh>
         )}
 
+        {/* Edge loop paths — thick polylines via drei Line (support variable width) */}
+        {data.loopPaths && data.loopPaths.length > 0 && (
+          <group scale={[1.002, 1.002, 1.002]}>
+            {data.loopPaths.map((path, i) => {
+              // Convert flat Float32Array to array of [x,y,z] triples for drei Line
+              const pts: [number, number, number][] = []
+              for (let j = 0; j < path.length; j += 3) {
+                pts.push([path[j], path[j + 1], path[j + 2]])
+              }
+              return (
+                <Line
+                  key={i}
+                  points={pts}
+                  color={color}
+                  lineWidth={2.5}
+                  transparent
+                  depthTest
+                  depthWrite={false}
+                  opacity={0.95}
+                />
+              )
+            })}
+          </group>
+        )}
+
         {/* Pole point markers + edge lines — micro-scaled outward to avoid z-fighting */}
         {(data.points || lineGeo) && (
           <group scale={[1.002, 1.002, 1.002]}>
@@ -184,7 +210,7 @@ export function HighlightOverlay({ model, objFaceData, singleModel }: HighlightO
               </points>
             )}
 
-            {/* Edge lines (non-manifold / edge loops / boundary holes) */}
+            {/* Edge lines (non-manifold / boundary holes) — NOT loop-edges */}
             {lineGeo && (
               <lineSegments geometry={lineGeo} renderOrder={1}>
                 <lineBasicMaterial

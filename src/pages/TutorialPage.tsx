@@ -68,8 +68,7 @@ export function TutorialPage() {
   const [aiResult, setAiResult] = useState<string | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
 
-  // Panel accordion state
-  const [expandedDim, setExpandedDim] = useState<string | null>(null)
+  // AI section toggle
   const [showAI, setShowAI] = useState(true)
 
   const { problemDef, excellentDef } = useMemo(() => {
@@ -269,7 +268,7 @@ export function TutorialPage() {
           </div>
 
           {/* ── Center: Professional analysis panel ── */}
-          <div className="w-[340px] shrink-0 border-x border-black/5 overflow-y-auto">
+          <div className="w-[420px] shrink-0 border-x border-black/5 overflow-y-auto">
             <div className="p-3 space-y-4">
               {/* Score comparison header */}
               <div className="text-center space-y-1">
@@ -295,6 +294,97 @@ export function TutorialPage() {
                 </div>
               </div>
 
+              {/* Dimension-by-dimension comparison */}
+              <div>
+                <h3 className="text-[12px] font-semibold text-text-primary mb-2 flex items-center gap-1.5">
+                  <Eye className="h-3.5 w-3.5 text-accent" />
+                  逐维度对比
+                  <span className="text-[10px] text-text-tertiary font-normal ml-auto">点击准则高亮</span>
+                </h3>
+
+                <div className="space-y-1.5">
+                  {standard.dimensions.map((dim) => {
+                    const probScore = problemDef.record.dimensionScores.find((d) => d.dimensionId === dim.id)
+                    const excScore = excellentDef.record.dimensionScores.find((d) => d.dimensionId === dim.id)
+                    const probPct = probScore ? probScore.score / probScore.maxScore : 0
+                    const excPct = excScore ? excScore.score / excScore.maxScore : 0
+
+                    return (
+                      <div key={dim.id} className="rounded-lg bg-black/[0.02] overflow-hidden">
+                        {/* Dimension header */}
+                        <div className="flex items-center gap-2 px-3 py-2">
+                          <span className="text-[12px] font-semibold text-text-primary truncate">{dim.name}</span>
+                          <span className="text-[10px] text-text-tertiary shrink-0">{dim.weight}分</span>
+                          {/* Mini score bars */}
+                          <div className="flex items-center gap-1 ml-auto">
+                            <div className="w-12 h-1.5 rounded-full bg-black/[0.06] overflow-hidden flex justify-end">
+                              <div className="h-full rounded-full bg-red-300/70" style={{ width: `${probPct * 100}%` }} />
+                            </div>
+                            <span className="mono text-[10px] text-red-400 w-6 text-right shrink-0">{probScore?.score.toFixed(1) ?? '0'}</span>
+                            <span className="text-[9px] text-text-tertiary">│</span>
+                            <span className="mono text-[10px] text-emerald-400 w-6 text-left shrink-0">{excScore?.score.toFixed(1) ?? '0'}</span>
+                            <div className="w-12 h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
+                              <div className="h-full rounded-full bg-emerald-300/70" style={{ width: `${excPct * 100}%` }} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Criteria list — always visible */}
+                        <div className="px-3 pb-2 space-y-0.5">
+                            {dim.criteria.map((crit) => {
+                              const pRaw = problemDef.record.reviewScores?.[crit.id] ?? 0
+                              const eRaw = excellentDef.record.reviewScores?.[crit.id] ?? 0
+                              const pPct = pRaw / 10
+                              const ePct = eRaw / 10
+                              const isActive = activeCriterion === crit.id
+
+                              return (
+                                <button
+                                  key={crit.id}
+                                  onClick={(e) => { e.stopPropagation(); handleCriterionClick(crit.id) }}
+                                  className={`w-full text-left rounded-md px-2 py-1.5 transition-all duration-150 ${
+                                    isActive
+                                      ? 'bg-accent/[0.08] border-l-[3px] border-accent pl-[5px]'
+                                      : 'border-l-[3px] border-transparent pl-[5px] hover:bg-black/[0.03]'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <span className={`text-[11px] font-medium truncate ${isActive ? 'text-accent' : 'text-text-secondary'}`}>
+                                      {crit.name}
+                                    </span>
+                                    <span className={`text-[9px] ml-1 shrink-0 ${isActive ? 'text-accent' : 'text-text-tertiary'}`}>
+                                      {crit.maxScore}分
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <div className="flex-1 h-1 rounded-full bg-black/[0.05] overflow-hidden flex justify-end">
+                                      <div
+                                        className={`h-full rounded-full transition-all duration-300 ${isActive ? 'bg-red-400' : 'bg-red-300/60'}`}
+                                        style={{ width: `${pPct * 100}%` }}
+                                      />
+                                    </div>
+                                    <span className={`mono text-[11px] font-semibold w-5 text-right shrink-0 ${isActive ? 'text-red-500' : 'text-red-400'}`}>
+                                      {pRaw}
+                                    </span>
+                                    <span className="text-[9px] text-text-tertiary shrink-0">│</span>
+                                    <span className={`mono text-[11px] font-semibold w-5 text-left shrink-0 ${isActive ? 'text-emerald-500' : 'text-emerald-400'}`}>
+                                      {eRaw}
+                                    </span>
+                                    <div className="flex-1 h-1 rounded-full bg-black/[0.05] overflow-hidden">
+                                      <div
+                                        className={`h-full rounded-full transition-all duration-300 ${isActive ? 'bg-emerald-400' : 'bg-emerald-300/60'}`}
+                                        style={{ width: `${ePct * 100}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                      </div>
+                    )
+                  })}
+                </div>
               <div className="border-t border-black/[0.06]" />
 
               {/* AI Analysis Section */}
@@ -373,104 +463,6 @@ export function TutorialPage() {
 
               <div className="border-t border-black/[0.06]" />
 
-              {/* Dimension-by-dimension comparison */}
-              <div>
-                <h3 className="text-[12px] font-semibold text-text-primary mb-2 flex items-center gap-1.5">
-                  <Eye className="h-3.5 w-3.5 text-accent" />
-                  逐维度对比
-                  <span className="text-[10px] text-text-tertiary font-normal ml-auto">点击准则高亮</span>
-                </h3>
-
-                <div className="space-y-1.5">
-                  {standard.dimensions.map((dim) => {
-                    const probScore = problemDef.record.dimensionScores.find((d) => d.dimensionId === dim.id)
-                    const excScore = excellentDef.record.dimensionScores.find((d) => d.dimensionId === dim.id)
-                    const probPct = probScore ? probScore.score / probScore.maxScore : 0
-                    const excPct = excScore ? excScore.score / excScore.maxScore : 0
-                    const isExpanded = expandedDim === dim.id
-
-                    return (
-                      <div key={dim.id} className="rounded-lg bg-black/[0.02] overflow-hidden">
-                        {/* Dimension header — clickable to expand */}
-                        <button
-                          onClick={() => setExpandedDim(isExpanded ? null : dim.id)}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-black/[0.03] transition-colors"
-                        >
-                          {isExpanded ? <ChevronDown className="h-3 w-3 text-text-tertiary shrink-0" /> : <ChevronRight className="h-3 w-3 text-text-tertiary shrink-0" />}
-                          <span className="text-[12px] font-medium text-text-primary truncate">{dim.name}</span>
-                          <span className="text-[10px] text-text-tertiary shrink-0">{dim.weight}分</span>
-                          {/* Mini score bars */}
-                          <div className="flex items-center gap-1 ml-auto">
-                            <div className="w-12 h-1.5 rounded-full bg-black/[0.06] overflow-hidden flex justify-end">
-                              <div className="h-full rounded-full bg-red-300/70" style={{ width: `${probPct * 100}%` }} />
-                            </div>
-                            <span className="mono text-[10px] text-red-400 w-6 text-right shrink-0">{probScore?.score.toFixed(1) ?? '0'}</span>
-                            <span className="text-[9px] text-text-tertiary">│</span>
-                            <span className="mono text-[10px] text-emerald-400 w-6 text-left shrink-0">{excScore?.score.toFixed(1) ?? '0'}</span>
-                            <div className="w-12 h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
-                              <div className="h-full rounded-full bg-emerald-300/70" style={{ width: `${excPct * 100}%` }} />
-                            </div>
-                          </div>
-                        </button>
-
-                        {/* Expanded: criteria list */}
-                        {isExpanded && (
-                          <div className="px-3 pb-2 space-y-0.5">
-                            {dim.criteria.map((crit) => {
-                              const pRaw = problemDef.record.reviewScores?.[crit.id] ?? 0
-                              const eRaw = excellentDef.record.reviewScores?.[crit.id] ?? 0
-                              const pPct = pRaw / 10
-                              const ePct = eRaw / 10
-                              const isActive = activeCriterion === crit.id
-
-                              return (
-                                <button
-                                  key={crit.id}
-                                  onClick={(e) => { e.stopPropagation(); handleCriterionClick(crit.id) }}
-                                  className={`w-full text-left rounded-md px-2 py-1.5 transition-all duration-150 ${
-                                    isActive
-                                      ? 'bg-accent/[0.08] border-l-[3px] border-accent pl-[5px]'
-                                      : 'border-l-[3px] border-transparent pl-[5px] hover:bg-black/[0.03]'
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-between mb-0.5">
-                                    <span className={`text-[11px] font-medium truncate ${isActive ? 'text-accent' : 'text-text-secondary'}`}>
-                                      {crit.name}
-                                    </span>
-                                    <span className={`text-[9px] ml-1 shrink-0 ${isActive ? 'text-accent' : 'text-text-tertiary'}`}>
-                                      {crit.maxScore}分
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <div className="flex-1 h-1 rounded-full bg-black/[0.05] overflow-hidden flex justify-end">
-                                      <div
-                                        className={`h-full rounded-full transition-all duration-300 ${isActive ? 'bg-red-400' : 'bg-red-300/60'}`}
-                                        style={{ width: `${pPct * 100}%` }}
-                                      />
-                                    </div>
-                                    <span className={`mono text-[11px] font-semibold w-5 text-right shrink-0 ${isActive ? 'text-red-500' : 'text-red-400'}`}>
-                                      {pRaw}
-                                    </span>
-                                    <span className="text-[9px] text-text-tertiary shrink-0">│</span>
-                                    <span className={`mono text-[11px] font-semibold w-5 text-left shrink-0 ${isActive ? 'text-emerald-500' : 'text-emerald-400'}`}>
-                                      {eRaw}
-                                    </span>
-                                    <div className="flex-1 h-1 rounded-full bg-black/[0.05] overflow-hidden">
-                                      <div
-                                        className={`h-full rounded-full transition-all duration-300 ${isActive ? 'bg-emerald-400' : 'bg-emerald-300/60'}`}
-                                        style={{ width: `${ePct * 100}%` }}
-                                      />
-                                    </div>
-                                  </div>
-                                </button>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
               </div>
             </div>
           </div>

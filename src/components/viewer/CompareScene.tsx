@@ -1,6 +1,7 @@
 import { Grid } from '@react-three/drei'
 import { LoadedModel } from './LoadedModel'
 import { HighlightOverlay } from './HighlightOverlay'
+import { SymmetryGuide } from './SymmetryGuide'
 import { SyncedOrbitControls } from './SyncedOrbitControls'
 import * as THREE from 'three'
 import type { RenderMode } from '@/types/viewer'
@@ -120,6 +121,9 @@ export function CompareScene({
       ) && (
         <HighlightOverlay model={model} objFaceData={objFaceData} autoReportOverride={highlightAutoReport} />
       )}
+
+      {/* Symmetry guide — only on center (low model) viewport */}
+      {side === 'center' && <SymmetryGuide model={model} />}
     </>
   )
 }

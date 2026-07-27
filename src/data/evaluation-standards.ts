@@ -550,8 +550,99 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
 /**
  * 根据 EvaluationType 获取对应的评测标准
  */
-export function getStandardByType(type: EvaluationType): EvaluationStandard {
-  return EVALUATION_STANDARDS[type]
+// ============================================================================
+// 对称性评测 — 权重调整
+// ============================================================================
+
+/** 对称性准则定义（通用） */
+const SYMMETRY_CRITERION_BASE = {
+  id: 'symmetry' as const,
+  name: '对称性',
+  description: '评测模型拓扑结构是否保持左右/轴向对称。适用于有对称设计需求的角色、道具、建筑等模型。观察要点：\n1. 左右两侧顶点分布是否镜像对称\n2. 中轴面两侧边线走向是否一致\n3. 关键结构（眼、耳、肩、肢体等）是否对称排布\n4. 非对称区域是否有合理的设计依据（如角色姿态、道具功能结构）',
+  maxScore: 0, // 由各标准的 SYMMETRY_CONFIG 覆盖
+  method: 'manual' as const,
+}
+
+/** 各标准在启用对称性后的维度权重与准则满分 */
+const SYMMETRY_CONFIG: Record<EvaluationType, {
+  dimWeights: Record<string, number>
+  critMax: Record<string, number>
+  symmetryMax: number
+}> = {
+  'game-static': {
+    dimWeights: { 'face-quality': 20, 'face-errors': 20, 'edge-flow': 60 },
+    critMax: {
+      'quad-tri-ratio': 7, 'tri-distribution': 5, 'pole-distribution': 4, 'ngon-count': 4,
+      'non-manifold': 10, 'overlapping': 7, 'boundary-holes': 3,
+      'structure': 13, 'flat-optimization': 7, 'density': 10, 'loop-edges': 10,
+    },
+    symmetryMax: 20,
+  },
+  'game-dynamic': {
+    dimWeights: { 'face-quality': 13, 'face-errors': 22, 'edge-flow': 30, 'animation-friendly': 35 },
+    critMax: {
+      'quad-tri-ratio': 4, 'tri-distribution': 3, 'pole-distribution': 3, 'ngon-count': 3,
+      'non-manifold': 11, 'overlapping': 7, 'boundary-holes': 4,
+      'structure': 7, 'flat-optimization': 3, 'density': 6, 'loop-edges': 4,
+      'joint-density': 17, 'joint-loop': 18,
+    },
+    symmetryMax: 10,
+  },
+  'general-static': {
+    dimWeights: { 'face-quality': 26, 'face-errors': 22, 'edge-flow': 52 },
+    critMax: {
+      'quad-tri-ratio': 9, 'tri-distribution': 7, 'pole-distribution': 5, 'ngon-count': 5,
+      'non-manifold': 11, 'overlapping': 7, 'boundary-holes': 4,
+      'structure': 11, 'flat-optimization': 6, 'density': 10, 'loop-edges': 8,
+    },
+    symmetryMax: 17,
+  },
+  'general-dynamic': {
+    dimWeights: { 'face-quality': 17, 'face-errors': 20, 'edge-flow': 38, 'animation-friendly': 25 },
+    critMax: {
+      'quad-tri-ratio': 7, 'tri-distribution': 4, 'pole-distribution': 3, 'ngon-count': 3,
+      'non-manifold': 10, 'overlapping': 6, 'boundary-holes': 4,
+      'structure': 8, 'flat-optimization': 4, 'density': 7, 'loop-edges': 6,
+      'joint-density': 13, 'joint-loop': 12,
+    },
+    symmetryMax: 13,
+  },
+}
+
+/**
+ * 根据 EvaluationType 获取对应的评测标准
+ * @param symmetryEnabled 是否启用对称性评测（启用后 edge-flow 权重 ×1.5，其他维度按比例缩减）
+ */
+export function getStandardByType(type: EvaluationType, symmetryEnabled = false): EvaluationStandard {
+  const base = EVALUATION_STANDARDS[type]
+  if (!symmetryEnabled) return base
+
+  const cfg = SYMMETRY_CONFIG[type]
+
+  return {
+    ...base,
+    dimensions: base.dimensions.map((dim) => {
+      const newWeight = cfg.dimWeights[dim.id]
+      const criteria = dim.criteria.map((crit) => ({
+        ...crit,
+        maxScore: cfg.critMax[crit.id] ?? crit.maxScore,
+      }))
+
+      // edge-flow 维度追加对称性准则
+      if (dim.id === 'edge-flow') {
+        criteria.push({
+          ...SYMMETRY_CRITERION_BASE,
+          maxScore: cfg.symmetryMax,
+        })
+      }
+
+      return {
+        ...dim,
+        weight: newWeight,
+        criteria,
+      }
+    }),
+  }
 }
 
 // ============================================================================

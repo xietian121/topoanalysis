@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Grid3X3, RotateCcw, Trash2, Palette } from 'lucide-react'
+import { Grid3X3, RotateCcw, Trash2, Palette, Columns2 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { useViewerStore } from '@/stores/viewerStore'
 import { useModelStore } from '@/stores/modelStore'
@@ -25,6 +25,7 @@ export function ViewerToolbar({ onClear, horizontal = false, showActions = true 
   const settings = useViewerStore((s) => s.settings)
   const setRenderMode = useViewerStore((s) => s.setRenderMode)
   const toggleGrid = useViewerStore((s) => s.toggleGrid)
+  const toggleSymmetry = useViewerStore((s) => s.toggleSymmetry)
   const resetCamera = useViewerStore((s) => s.resetCamera)
   const clearModel = useModelStore((s) => s.clearModel)
 
@@ -72,6 +73,15 @@ export function ViewerToolbar({ onClear, horizontal = false, showActions = true 
         >
           <Grid3X3 className="h-4 w-4" />
           {!horizontal && <span className="text-[9px] leading-none">网格</span>}
+        </button>
+
+        <button
+          onClick={toggleSymmetry}
+          className={`${btnBase} ${settings.showSymmetry ? activeClass : inactiveClass}`}
+          title="对称性参考面"
+        >
+          <Columns2 className="h-4 w-4" />
+          {!horizontal && <span className="text-[9px] leading-none">对称</span>}
         </button>
 
         <button

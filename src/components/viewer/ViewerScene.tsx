@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { OrbitControls, Grid } from '@react-three/drei'
 import { LoadedModel } from './LoadedModel'
 import { HighlightOverlay } from './HighlightOverlay'
+import { SymmetryGuide } from './SymmetryGuide'
 import { useHighlightStore } from '@/stores/highlightStore'
 import { useModelStore } from '@/stores/modelStore'
 import * as THREE from 'three'
@@ -146,6 +147,9 @@ export function ViewerScene({
 
       {/* Highlight overlay — only in normal mode */}
       {model && !isStructureMode && <HighlightOverlay model={model} singleModel />}
+
+      {/* Symmetry guide */}
+      {model && !isStructureMode && <SymmetryGuide model={model} />}
     </>
   )
 }

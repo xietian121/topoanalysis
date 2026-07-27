@@ -64,7 +64,7 @@ export function ScoringHeader() {
       setFlowResult({ ...flowScores }, total)
 
       // Generate suggestions
-      const standard = getStandardByType(evaluationType)
+      const standard = getStandardByType(evaluationType)  // 对称性由父组件控制
       const dimScores = standard.dimensions.map((dim) => {
         let score = 0
         for (const crit of dim.criteria) {

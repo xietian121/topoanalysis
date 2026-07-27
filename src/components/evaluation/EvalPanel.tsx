@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator'
 import { Card, CardContent } from '@/components/ui/card'
 import { useEvalStore, computeTotalScore, computeAutoScore, computeManualScore, roundScore } from '@/stores/evalStore'
 import { useModelStore } from '@/stores/modelStore'
+import { useViewerStore } from '@/stores/viewerStore'
 import { useEvalHistoryStore, type EvalHistoryRecord } from '@/stores/evalHistoryStore'
 import { useEvalFlowStore, computeFlowTotal, isAllScored, type FlattenedCriterion } from '@/stores/evalFlowStore'
 import { useHighlightStore } from '@/stores/highlightStore'
@@ -51,7 +52,9 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
   const flowSetScore = useEvalFlowStore((s) => s.setScore)
   const flowFinish = useEvalFlowStore((s) => s.finishFlow)
   const setHighlight = useHighlightStore((s) => s.setCriterion)
+  const setShowSymmetry = useViewerStore((s) => s.setShowSymmetry)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [symmetryEnabled, setSymmetryEnabled] = useState(false)
 
   // Sync expandedId with flow currentIndex when navigating via prev/next buttons
   useEffect(() => {
@@ -91,7 +94,7 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
     }
   }, [modelObject, objFaceData, setAutoReport, resetEval])
 
-  const standard = getStandardByType(evaluationType)
+  const standard = getStandardByType(evaluationType, symmetryEnabled)
   const scores = autoReport
     ? computeTotalScore(evaluationType, autoReport, manualRatings)
     : { autoTotal: 0, manualTotal: 0, total: 0, maxTotal: 100 }
@@ -193,6 +196,7 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
       autoReport,
       manualRatings,
       reviewScores: flowReviewScores ?? undefined,
+      symmetryEnabled: symmetryEnabled || undefined,
     }
     addRecord(record)
   }, [currentModel, autoReport, evaluationType, scores, displayScores, manualRatings, flowReviewScores, addRecord])
@@ -275,6 +279,36 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
             </div>
           )}
         </section>
+
+        <Separator className="bg-black/5" />
+
+        {/* Symmetry toggle */}
+        {currentModel && (
+          <section>
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={symmetryEnabled}
+                  onChange={(e) => {
+                    setSymmetryEnabled(e.target.checked)
+                    setShowSymmetry(e.target.checked)
+                  }}
+                  className="sr-only"
+                />
+                <div className={`w-9 h-5 rounded-full transition-colors duration-200 ${symmetryEnabled ? 'bg-accent' : 'bg-black/[0.12]'}`}>
+                  <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform duration-200 mt-[3px] ${symmetryEnabled ? 'translate-x-[19px]' : 'translate-x-[3px]'}`} />
+                </div>
+              </div>
+              <div>
+                <span className="text-[12px] font-medium text-text-primary">启用对称性评测</span>
+                <p className="text-[10px] text-text-tertiary mt-0.5">
+                  勾选后将在布线合理性维度新增对称性准则，权重自动调整，3D 视口显示对称参考面
+                </p>
+              </div>
+            </label>
+          </section>
+        )}
 
         <Separator className="bg-black/5" />
 

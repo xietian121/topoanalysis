@@ -216,6 +216,7 @@ function formatCriterionScores(record: EvalHistoryRecord): string {
     'loop-edges': '循环线完整性',
     'joint-density': '关节区域面数倾斜',
     'joint-loop-edges': '可动部位环形线',
+    'symmetry': '对称性',
   }
   return Object.entries(record.reviewScores)
     .map(([id, score]) => `- ${nameMap[id] ?? id}: ${score}/10`)

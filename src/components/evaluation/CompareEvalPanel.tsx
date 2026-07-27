@@ -80,7 +80,7 @@ export function CompareEvalPanel() {
     }
   }, [lowModel.object, lowModel.faceData, setAutoReport, resetEval])
 
-  const standard = getStandardByType(evaluationType)
+  const standard = getStandardByType(evaluationType)  // 对比评测默认不启用对称性
   const scores = autoReport
     ? computeTotalScore(evaluationType, autoReport, manualRatings)
     : { autoTotal: 0, manualTotal: 0, total: 0, maxTotal: 100 }

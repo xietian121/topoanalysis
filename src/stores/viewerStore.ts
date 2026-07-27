@@ -9,6 +9,8 @@ interface ViewerStore {
   setRenderMode: (mode: RenderMode) => void
   toggleGrid: () => void
   toggleAutoRotate: () => void
+  toggleSymmetry: () => void
+  setShowSymmetry: (show: boolean) => void
   resetCamera: () => void
   setMaterialColor: (color: string) => void
   setMaterialRoughness: (roughness: number) => void
@@ -22,6 +24,7 @@ const defaultSettings: ViewerSettings = {
   materialColor: '#d0d0d0',
   materialRoughness: 0.4,
   materialMetalness: 0,
+  showSymmetry: false,
 }
 
 export const useViewerStore = create<ViewerStore>()(
@@ -36,6 +39,10 @@ export const useViewerStore = create<ViewerStore>()(
         set((s) => ({ settings: { ...s.settings, showGrid: !s.settings.showGrid } })),
       toggleAutoRotate: () =>
         set((s) => ({ settings: { ...s.settings, autoRotate: !s.settings.autoRotate } })),
+      toggleSymmetry: () =>
+        set((s) => ({ settings: { ...s.settings, showSymmetry: !s.settings.showSymmetry } })),
+      setShowSymmetry: (show) =>
+        set((s) => ({ settings: { ...s.settings, showSymmetry: show } })),
       resetCamera: () => set((s) => ({ cameraResetCounter: s.cameraResetCounter + 1 })),
 
       setMaterialColor: (color) =>

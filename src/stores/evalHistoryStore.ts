@@ -27,6 +27,8 @@ export interface EvalHistoryRecord {
   autoReport: TopologyReport | null
   manualRatings: Record<string, RatingLevel>
   reviewScores?: Record<string, number>
+  /** 是否启用对称性评测 */
+  symmetryEnabled?: boolean
 
   // ===== Phase 2 新增字段 =====
   /** 是否为示例模型 */

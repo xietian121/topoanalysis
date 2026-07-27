@@ -70,7 +70,7 @@ export function ScoringPanel() {
     }
   }, [modelObject, objFaceData, setAutoReport, resetEval])
 
-  const standard = getStandardByType(evaluationType)
+  const standard = getStandardByType(evaluationType)  // 对称性由父组件 EvalPanel 控制
 
   // Derive full criteria list from standard
   const allCriteria = useMemo(() => {

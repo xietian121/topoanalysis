@@ -390,7 +390,7 @@ export function CompareReportPage() {
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-text-primary mb-3">模型 A 得分详情</h3>
             {(() => {
-              const stdA = getStandardByType(recordA.evaluationType)
+              const stdA = getStandardByType(recordA.evaluationType, recordA.symmetryEnabled)
               return (
                 <DimensionAccordion
                   dimensions={stdA.dimensions.map((dim) => ({
@@ -411,7 +411,7 @@ export function CompareReportPage() {
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-text-primary mb-3">模型 B 得分详情</h3>
             {(() => {
-              const stdB = getStandardByType(recordB.evaluationType)
+              const stdB = getStandardByType(recordB.evaluationType, recordB.symmetryEnabled)
               return (
                 <DimensionAccordion
                   dimensions={stdB.dimensions.map((dim) => ({

@@ -315,7 +315,7 @@ export function ReportPage() {
     return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
 
-  const standard = getStandardByType(record.evaluationType)
+  const standard = getStandardByType(record.evaluationType, record.symmetryEnabled)
   const dimensionAccordionData = useMemo(() => {
     return standard.dimensions.map((dim) => ({
       dimensionId: dim.id,

@@ -15,4 +15,6 @@ export interface ViewerSettings {
   materialColor: string
   materialRoughness: number
   materialMetalness: number
+  /** 是否显示对称性辅助面 */
+  showSymmetry: boolean
 }

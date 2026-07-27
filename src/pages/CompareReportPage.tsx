@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Minus, AlertTriangle, Lightbulb } from 'lucide-react'
+import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Minus, AlertTriangle, Lightbulb, Sparkles, Loader2, RefreshCw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -11,6 +11,7 @@ import { getStandardByType } from '@/data/evaluation-standards'
 import { RadarChart } from '@/components/evaluation/RadarChart'
 import { DimensionAccordion } from '@/components/report/DimensionAccordion'
 import { Report3DPreview } from '@/components/report/Report3DPreview'
+import { generateAICompareAnalysis } from '@/lib/ai-analysis'
 import { roundScore } from '@/stores/evalStore'
 import { MODEL_TYPE_LABELS } from '@/types/evaluation'
 
@@ -65,6 +66,43 @@ export function CompareReportPage() {
 
     return { diff, winner, dimComparisons, commonIssues }
   }, [recordA, recordB])
+
+  // ────── AI 对比分析 ──────
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResult, setAiResult] = useState<string | null>(null)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const aiTriggered = useRef(false)
+
+  useEffect(() => {
+    if (!recordA || !recordB || aiTriggered.current) return
+    if (!recordA.autoReport && !recordB.autoReport) return
+
+    aiTriggered.current = true
+    setAiLoading(true)
+    setAiError(null)
+
+    generateAICompareAnalysis(recordA, recordB)
+      .then(setAiResult)
+      .catch((err) => {
+        console.error('AI 对比分析失败:', err)
+        setAiError(err instanceof Error ? err.message : 'AI 对比分析服务暂时不可用')
+      })
+      .finally(() => setAiLoading(false))
+  }, [recordA, recordB])
+
+  // Markdown renderer
+  function renderMD(md: string): string {
+    let html = md
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    html = html.replace(/^### (.+)$/gm, '<h3 class="text-[13px] font-bold text-text-primary mt-3 mb-2">$1</h3>')
+    html = html.replace(/^## (.+)$/gm, '<h2 class="text-[14px] font-bold text-text-primary mt-4 mb-2">$1</h2>')
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-text-primary">$1</strong>')
+    html = html.replace(/^- (.+)$/gm, '<li class="ml-4 mt-1 text-[12px] text-text-secondary list-disc">$1</li>')
+    html = html.replace(/\n\n/g, '</p><p class="text-[12px] text-text-secondary leading-relaxed">')
+    html = '<p class="text-[12px] text-text-secondary leading-relaxed">' + html + '</p>'
+    html = html.replace(/<p[^>]*><\/p>/g, '')
+    return html
+  }
 
   if (!recordA || !recordB) {
     return (
@@ -266,6 +304,84 @@ export function CompareReportPage() {
             </Card>
           </section>
         )}
+
+        <Separator className="bg-black/5" />
+
+        {/* ===== AI 对比分析 ===== */}
+        <section>
+          <h2 className="text-[14px] font-semibold tracking-[-0.01em] flex items-center gap-2 mb-3">
+            <Sparkles className="h-4 w-4 text-accent" />
+            AI 对比分析
+            <span className="text-[10px] font-normal text-text-tertiary">DeepSeek</span>
+          </h2>
+
+          {aiLoading && (
+            <Card>
+              <CardContent className="p-6 flex flex-col items-center gap-3">
+                <Loader2 className="h-6 w-6 text-accent animate-spin" />
+                <p className="text-[13px] text-text-secondary">AI 正在对比分析两个模型...</p>
+                <p className="text-[11px] text-text-tertiary">通常需要 10-20 秒，请耐心等待</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {aiError && !aiLoading && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[12px] font-medium text-text-primary">AI 对比分析暂时不可用</p>
+                    <p className="text-[11px] text-text-tertiary mt-1">{aiError}</p>
+                    <button
+                      onClick={() => {
+                        if (!recordA || !recordB) return
+                        setAiError(null)
+                        setAiLoading(true)
+                        generateAICompareAnalysis(recordA, recordB)
+                          .then(setAiResult)
+                          .catch((err) => setAiError(err instanceof Error ? err.message : 'AI 分析失败'))
+                          .finally(() => setAiLoading(false))
+                      }}
+                      className="mt-2 text-[11px] text-accent hover:underline"
+                    >
+                      重试
+                    </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {aiResult && !aiLoading && (
+            <Card>
+              <CardContent className="p-4">
+                <div
+                  className="text-[12px] text-text-secondary leading-relaxed space-y-3"
+                  dangerouslySetInnerHTML={{ __html: renderMD(aiResult) }}
+                />
+                <div className="mt-4 pt-3 border-t border-black/5 flex justify-end">
+                  <button
+                    onClick={() => {
+                      if (!recordA || !recordB) return
+                      setAiResult(null)
+                      setAiLoading(true)
+                      setAiError(null)
+                      generateAICompareAnalysis(recordA, recordB)
+                        .then(setAiResult)
+                        .catch((err) => setAiError(err instanceof Error ? err.message : 'AI 分析失败'))
+                        .finally(() => setAiLoading(false))
+                    }}
+                    className="inline-flex items-center gap-1 text-[10px] text-text-tertiary hover:text-accent transition-colors"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    重新生成
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </section>
 
         <Separator className="bg-black/5" />
 

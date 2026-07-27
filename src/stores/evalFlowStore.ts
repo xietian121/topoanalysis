@@ -61,13 +61,13 @@ export const useEvalFlowStore = create<EvalFlowStore>()((set, get) => ({
 }))
 
 /**
- * Check if all criteria have been scored (score > 0).
+ * Check if all criteria have been scored (including score 0).
  */
 export function isAllScored(
   criteria: FlattenedCriterion[],
   reviewScores: Record<string, number>,
 ): boolean {
-  return criteria.every((c) => (reviewScores[c.id] ?? 0) > 0)
+  return criteria.every((c) => c.id in reviewScores)
 }
 
 /**

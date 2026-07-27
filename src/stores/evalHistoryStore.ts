@@ -4,6 +4,7 @@ import type { TopologyReport } from '@/lib/topology-analyzer'
 import type { RatingLevel } from './evalStore'
 import type { EvaluationType, EvaluationSuggestions } from '@/types/evaluation'
 import type { ModelInfo } from '@/types/model'
+import type { AIAnalysisResult } from '@/lib/ai-analysis'
 
 export interface EvalHistoryRecord {
   id: string
@@ -42,6 +43,8 @@ export interface EvalHistoryRecord {
   evalStatus?: 'completed' | 'in_progress' | 'not_started'
   /** OBJ 模型文本内容（用于报告页重新加载模型） */
   modelText?: string
+  /** AI 深度分析结果 */
+  aiAnalysis?: AIAnalysisResult
 }
 
 interface EvalHistoryStore {

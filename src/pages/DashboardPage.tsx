@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, ArrowRight, Gamepad2, Palette, Bone, Box, BarChart4, ClipboardCheck, Search, Star, Clock, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Upload, ArrowRight, Gamepad2, Palette, Bone, Box, BarChart4, ClipboardCheck, Search, Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ModelCardThumbnail } from '@/components/viewer/ModelCardThumbnail'
 import { APP_TITLE } from '@/lib/constants'
@@ -8,7 +8,7 @@ import { useEvalHistoryStore, type EvalHistoryRecord } from '@/stores/evalHistor
 import { useModelStore } from '@/stores/modelStore'
 import { useEvalStore } from '@/stores/evalStore'
 import { useLoadingStore } from '@/stores/loadingStore'
-import { getExampleRecords, getExampleDefs, type ExampleModelDef } from '@/data/example-models'
+import { getExampleDefs, type ExampleModelDef } from '@/data/example-models'
 import { MODEL_TYPE_LABELS, type EvaluationType } from '@/types/evaluation'
 
 type FilterUsage = 'all' | 'game' | 'general'
@@ -132,26 +132,6 @@ function ModelCard({ record, isExample, modelUrl, onClick }: {
   )
 }
 
-function StatsCard({ icon: Icon, label, value, sub }: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  value: string | number
-  sub?: string
-}) {
-  return (
-    <div className="rounded-2xl glass p-4 flex items-center gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-text-secondary">
-        <Icon className="h-5 w-5" />
-      </div>
-      <div>
-        <p className="mono text-[20px] font-bold text-text-primary leading-none">{value}</p>
-        <p className="text-[11px] text-text-tertiary mt-1">{label}</p>
-        {sub && <p className="text-[10px] text-text-tertiary">{sub}</p>}
-      </div>
-    </div>
-  )
-}
-
 export function DashboardPage() {
   const navigate = useNavigate()
   const allHistoryRecords = useEvalHistoryStore((s) => s.records)
@@ -162,21 +142,8 @@ export function DashboardPage() {
     [allHistoryRecords],
   )
 
-  // Merge example models with user records
-  const exampleRecords = useMemo(() => getExampleRecords(), [])
-
   const [userUsage, setUserUsage] = useState<FilterUsage>('all')
   const [userAnimation, setUserAnimation] = useState<FilterAnimation>('all')
-
-  // All records (for stats only)
-  const allRecords = useMemo(() => {
-    const map = new Map<string, EvalHistoryRecord>()
-    for (const r of exampleRecords) map.set(r.id, r)
-    for (const r of allHistoryRecords) {
-      if (!map.has(r.id)) map.set(r.id, r)
-    }
-    return Array.from(map.values())
-  }, [exampleRecords, allHistoryRecords])
 
   // Filter helpers
   function filterRecords(records: EvalHistoryRecord[], usage: FilterUsage, animation: FilterAnimation) {
@@ -193,17 +160,6 @@ export function DashboardPage() {
     () => filterRecords(userRecords, userUsage, userAnimation),
     [userRecords, userUsage, userAnimation],
   )
-
-  // Stats
-  const stats = useMemo(() => {
-    const evaluated = allRecords.filter((r) => r.evalStatus === 'completed' || r.total > 0)
-    const totalEvaluated = evaluated.length
-    const avgScore = totalEvaluated > 0 ? Math.round(evaluated.reduce((s, r) => s + r.total, 0) / totalEvaluated * 10) / 10 : 0
-    const excellentCount = evaluated.filter((r) => r.total >= 80).length
-    const excellentRate = totalEvaluated > 0 ? Math.round((excellentCount / totalEvaluated) * 100) : 0
-    const topIssue = '三角面分布不合理'
-    return { totalEvaluated, avgScore, excellentRate, topIssue }
-  }, [allRecords])
 
   const handleCardClick = useCallback(async (record: EvalHistoryRecord) => {
     // 已评测的示例模型 → 加载模型后进入查看器
@@ -353,13 +309,6 @@ export function DashboardPage() {
               </div>
             </div>
 
-            {/* Stats overview */}
-            <div className="grid grid-cols-2 gap-2 w-[320px] shrink-0">
-              <StatsCard icon={BarChart4} label="已评测模型" value={stats.totalEvaluated} />
-              <StatsCard icon={TrendingUp} label="平均总分" value={stats.avgScore} sub={`/ 100`} />
-              <StatsCard icon={Star} label="优秀率" value={`${stats.excellentRate}%`} sub="≥80分" />
-              <StatsCard icon={AlertTriangle} label="最常见问题" value={stats.topIssue} />
-            </div>
           </div>
         </section>
 

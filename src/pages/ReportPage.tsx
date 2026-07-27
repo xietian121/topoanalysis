@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, AlertTriangle, AlertCircle, CheckCircle2, ExternalLink, RefreshCw } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, AlertCircle, CheckCircle2, ExternalLink, RefreshCw, Sparkles, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -10,6 +10,8 @@ import { useEvalHistoryStore } from '@/stores/evalHistoryStore'
 import { useModelStore } from '@/stores/modelStore'
 import { useHighlightStore } from '@/stores/highlightStore'
 import { useLoadingStore } from '@/stores/loadingStore'
+import { generateAIAnalysis } from '@/lib/ai-analysis'
+import type { AIAnalysisResult } from '@/lib/ai-analysis'
 import { getExampleRecords } from '@/data/example-models'
 import { getStandardByType } from '@/data/evaluation-standards'
 import { RadarChart } from '@/components/evaluation/RadarChart'
@@ -17,6 +19,35 @@ import { ScoreBadge } from '@/components/evaluation/ScoreBadge'
 import { DimensionAccordion } from '@/components/report/DimensionAccordion'
 import { MODEL_TYPE_LABELS } from '@/types/evaluation'
 import type { SuggestionItem } from '@/types/evaluation'
+
+/** 简易 Markdown → HTML，支持 ### ## ** - 列表 */
+function renderMarkdown(md: string): string {
+  let html = md
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  // 标题
+  html = html.replace(/^#### (.+)$/gm, '<h4 class="text-[12px] font-semibold text-text-primary mt-3 mb-1">$1</h4>')
+  html = html.replace(/^### (.+)$/gm, '<h3 class="text-[13px] font-bold text-text-primary mt-4 mb-2">$1</h3>')
+  html = html.replace(/^## (.+)$/gm, '<h2 class="text-[14px] font-bold text-text-primary mt-4 mb-2">$1</h2>')
+
+  // 粗体
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-text-primary">$1</strong>')
+
+  // 列表项
+  html = html.replace(/^- (.+)$/gm, '<li class="ml-4 mt-1 text-[12px] text-text-secondary list-disc">$1</li>')
+  html = html.replace(/^(\d+)\. (.+)$/gm, '<li class="ml-4 mt-1 text-[12px] text-text-secondary list-decimal" value="$1">$2</li>')
+
+  // 段落（连续非空行 → <p>）
+  html = html.replace(/\n\n/g, '</p><p class="text-[12px] text-text-secondary leading-relaxed">')
+  html = '<p class="text-[12px] text-text-secondary leading-relaxed">' + html + '</p>'
+
+  // 清理空 <p>
+  html = html.replace(/<p[^>]*><\/p>/g, '')
+
+  return html
+}
 
 function SuggestionSection({ title, items, icon: Icon, colorClass, borderClass, onItemClick }: {
   title: string
@@ -69,6 +100,7 @@ export function ReportPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const historyRecords = useEvalHistoryStore((s) => s.records)
+  const updateRecord = useEvalHistoryStore((s) => s.updateRecord)
   const setHighlight = useHighlightStore((s) => s.setCriterion)
   const exampleRecords = useMemo(() => getExampleRecords(), [])
 
@@ -139,6 +171,38 @@ export function ReportPage() {
 
     loadModel()
   }, [record, alreadyLoaded])
+
+  // ────── AI 深度分析 ──────
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(record?.aiAnalysis ?? null)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const aiTriggered = useRef(false)
+
+  useEffect(() => {
+    if (!record || aiTriggered.current) return
+    // 如果已有缓存的 AI 分析，直接使用
+    if (record.aiAnalysis) {
+      setAiResult(record.aiAnalysis)
+      return
+    }
+    // 只有有自动检测数据的记录才触发 AI 分析
+    if (!record.autoReport) return
+
+    aiTriggered.current = true
+    setAiLoading(true)
+    setAiError(null)
+
+    generateAIAnalysis(record)
+      .then((result) => {
+        setAiResult(result)
+        updateRecord(record.id, { aiAnalysis: result })
+      })
+      .catch((err) => {
+        console.error('AI 分析失败:', err)
+        setAiError(err instanceof Error ? err.message : 'AI 分析服务暂时不可用')
+      })
+      .finally(() => setAiLoading(false))
+  }, [record, updateRecord])
 
   // Clean up highlight on unmount
   useEffect(() => {
@@ -397,11 +461,105 @@ export function ReportPage() {
             </section>
           )}
 
-          {!suggestions && (
+          {!suggestions && !aiLoading && !aiResult && !aiError && (
             <section className="text-center py-8">
               <p className="text-[13px] text-text-tertiary">暂无优化建议数据</p>
             </section>
           )}
+
+          {/* ===== AI 深度分析 ===== */}
+          <Separator className="bg-black/5" />
+
+          <section>
+            <h2 className="text-[13px] font-semibold tracking-[-0.01em] flex items-center gap-2 mb-3">
+              <Sparkles className="h-3.5 w-3.5 text-accent" />
+              AI 深度分析
+              <span className="text-[10px] font-normal text-text-tertiary">DeepSeek</span>
+            </h2>
+
+            {/* Loading */}
+            {aiLoading && (
+              <Card>
+                <CardContent className="p-6 flex flex-col items-center gap-3">
+                  <Loader2 className="h-6 w-6 text-accent animate-spin" />
+                  <p className="text-[13px] text-text-secondary">AI 正在分析模型拓扑数据...</p>
+                  <p className="text-[11px] text-text-tertiary">通常需要 5-15 秒，请耐心等待</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Error */}
+            {aiError && !aiLoading && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-2.5">
+                    <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-[12px] font-medium text-text-primary">AI 分析暂时不可用</p>
+                      <p className="text-[11px] text-text-tertiary mt-1">{aiError}</p>
+                      <button
+                        onClick={() => {
+                          if (!record) return
+                          setAiError(null)
+                          setAiLoading(true)
+                          generateAIAnalysis(record)
+                            .then((result) => {
+                              setAiResult(result)
+                              updateRecord(record.id, { aiAnalysis: result })
+                            })
+                            .catch((err) => {
+                              setAiError(err instanceof Error ? err.message : 'AI 分析失败')
+                            })
+                            .finally(() => setAiLoading(false))
+                        }}
+                        className="mt-2 text-[11px] text-accent hover:underline"
+                      >
+                        重试
+                      </button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Result */}
+            {aiResult && !aiLoading && (
+              <Card>
+                <CardContent className="p-4">
+                  <div
+                    className="text-[12px] text-text-secondary leading-relaxed space-y-3 ai-analysis-content"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(aiResult.content) }}
+                  />
+                  <div className="mt-4 pt-3 border-t border-black/5 flex items-center justify-between">
+                    <span className="text-[10px] text-text-tertiary">
+                      {formatDate(aiResult.generatedAt)}
+                    </span>
+                    <button
+                      onClick={() => {
+                        if (!record) return
+                        setAiResult(null)
+                        setAiLoading(true)
+                        setAiError(null)
+                        generateAIAnalysis(record)
+                          .then((result) => {
+                            setAiResult(result)
+                            updateRecord(record.id, { aiAnalysis: result })
+                          })
+                          .catch((err) => {
+                            setAiError(err instanceof Error ? err.message : 'AI 分析失败')
+                          })
+                          .finally(() => setAiLoading(false))
+                      }}
+                      className="inline-flex items-center gap-1 text-[10px] text-text-tertiary hover:text-accent transition-colors"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      重新生成
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </section>
 
           <Separator className="bg-black/5" />
 

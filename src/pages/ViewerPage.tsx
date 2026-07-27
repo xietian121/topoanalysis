@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { CompareCanvas } from '@/components/viewer/CompareCanvas'
 import { ModelInfoOverlay } from '@/components/viewer/ModelInfoOverlay'
@@ -31,25 +31,45 @@ export function ViewerPage() {
   const flowGoTo = useEvalFlowStore((s) => s.goTo)
   const flowSetScore = useEvalFlowStore((s) => s.setScore)
 
+  const setRenderMode = useViewerStore((s) => s.setRenderMode)
+
   // 结构跟随性叠加模式
   const isStructureMode = criterionId === 'structure' && referenceModel !== null
+  const prevRenderMode = useRef<typeof renderMode>('solid')
+
+  // 进入结构跟随性时自动切到混合模式，离开时恢复
+  useEffect(() => {
+    if (isStructureMode) {
+      prevRenderMode.current = renderMode
+      setRenderMode('wireframe-solid')
+    } else {
+      setRenderMode(prevRenderMode.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStructureMode])
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isFlowActive) return
 
-    // Number keys 1-0 for scoring
+    // Number keys 0-9 for scoring, - for 10
+    if (e.key === '0') {
+      e.preventDefault()
+      const crit = flowCriteria[flowCurrentIndex]
+      if (crit) flowSetScore(crit.id, 0)
+      return
+    }
+    if (e.key === '-' || e.key === '_') {
+      e.preventDefault()
+      const crit = flowCriteria[flowCurrentIndex]
+      if (crit) flowSetScore(crit.id, 10)
+      return
+    }
     const numKey = parseInt(e.key)
     if (numKey >= 1 && numKey <= 9) {
       e.preventDefault()
       const crit = flowCriteria[flowCurrentIndex]
       if (crit) flowSetScore(crit.id, numKey)
-      return
-    }
-    if (e.key === '0') {
-      e.preventDefault()
-      const crit = flowCriteria[flowCurrentIndex]
-      if (crit) flowSetScore(crit.id, 10)
       return
     }
 

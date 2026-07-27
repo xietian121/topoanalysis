@@ -73,7 +73,7 @@ export function CompareScene({
       {/* Structure comparison mode: dual-model overlay */}
       {overlayModel && model ? (
         <>
-          {/* Base (reference/high-poly) model — original material, normalized to overlay model's bounds */}
+          {/* Base (reference/high-poly) model — always solid, normalized to overlay model's bounds */}
           <LoadedModel
             model={model}
             normalizationFrom={overlayModel}
@@ -81,11 +81,10 @@ export function CompareScene({
             forceSolid
             objFaceData={null}
           />
-          {/* Overlay (low-poly) model — blue semi-transparent */}
+          {/* Overlay (low-poly) model — 跟随 renderMode，工具栏切换线框/混合模式均可生效 */}
           <LoadedModel
             model={overlayModel}
-            renderMode="solid"
-            forceSolid
+            renderMode={renderMode}
             objFaceData={objFaceData}
             materialColor="#4a90d9"
             materialRoughness={0.3}

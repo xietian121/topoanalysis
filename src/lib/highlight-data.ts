@@ -320,6 +320,23 @@ export function getHighlightData(
     }
   }
 
+  // Edge-based highlight (boundary-holes) — boundary edges
+  if (criterionId === 'boundary-holes') {
+    const { boundary } = report
+    if (boundary.count === 0) return null
+    const edgePositions: number[] = []
+    for (const edge of boundary.edges) {
+      edgePositions.push(
+        edge.a[0], edge.a[1], edge.a[2],
+        edge.b[0], edge.b[1], edge.b[2],
+      )
+    }
+    if (edgePositions.length === 0) return null
+    return {
+      lines: { positions: new Float32Array(edgePositions) },
+    }
+  }
+
   // Edge-based highlight (loop-edges) — closed edge loops
   if (criterionId === 'loop-edges') {
     if (!report.edgeLoops || report.edgeLoops.loops.length === 0) return null

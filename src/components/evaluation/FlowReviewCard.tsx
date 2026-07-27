@@ -27,11 +27,11 @@ function getAutoData(criterionId: string, report: TopologyReport): string | null
       )
     case 'non-manifold':
       return `检测到非流形边 ${nonManifold.count} 条` + (
-        nonManifold.count === 0 ? ' ✓' : ` — 每条扣除 0.5 分`
+        nonManifold.count === 0 ? ' ✓' : ` — 每条扣除 1 分`
       )
     case 'overlapping':
       return `检测到重叠面对 ${overlapping.count} 组` + (
-        overlapping.count === 0 ? ' ✓' : ` — 每组扣除 0.5 分`
+        overlapping.count === 0 ? ' ✓' : ` — 每组扣除 1 分`
       )
     case 'density':
       return report.density
@@ -77,17 +77,17 @@ function getRecommendation(
     case 'non-manifold': {
       if (nonManifold.count === 0) return '未检测到非流形边，满分通过'
       const autoScore = computeAutoScore(criterion, report)
-      return `${nonManifold.count} 条非流形边，每条扣 0.5 分，推荐 ${autoScore.toFixed(1)}/${criterion.maxScore} 分`
+      return `${nonManifold.count} 条非流形边，每条扣 1 分，推荐 ${autoScore.toFixed(1)}/${criterion.maxScore} 分`
     }
     case 'overlapping': {
       if (overlapping.count === 0) return '未检测到重叠面，满分通过'
       const autoScore = computeAutoScore(criterion, report)
-      return `${overlapping.count} 组重叠面，每组扣 0.5 分，推荐 ${autoScore.toFixed(1)}/${criterion.maxScore} 分`
+      return `${overlapping.count} 组重叠面，每组扣 1 分，推荐 ${autoScore.toFixed(1)}/${criterion.maxScore} 分`
     }
     case 'boundary-holes': {
       if (boundary.count === 0) return '未检测到破洞边，满分通过'
       const autoScore = computeAutoScore(criterion, report)
-      return `${boundary.count} 条边界边（破洞），每条扣 0.5 分，推荐 ${autoScore.toFixed(1)}/${criterion.maxScore} 分`
+      return `${boundary.count} 条边界边（破洞），每条扣 1 分，推荐 ${autoScore.toFixed(1)}/${criterion.maxScore} 分`
     }
     case 'tri-distribution': {
       if (faceStats.triCount === 0) return '未检测到三角面，建议评分 10'
@@ -157,7 +157,7 @@ export function FlowReviewCard({
   return (
     <div className="mt-2 space-y-3 px-1">
       {/* Description */}
-      <p className="text-[12px] text-text-secondary leading-relaxed">
+      <p className="text-[12px] text-text-secondary leading-relaxed whitespace-pre-line">
         {criterion.description}
       </p>
 
@@ -186,11 +186,12 @@ export function FlowReviewCard({
         </div>
       )}
 
-      {/* Score dots */}
+      {/* Score dots — 0~10 */}
       <div className="flex items-center justify-center gap-1">
-        {Array.from({ length: 10 }, (_, i) => {
-          const s = i + 1
-          const active = s <= currentScore
+        {Array.from({ length: 11 }, (_, i) => {
+          const s = i // 0,1,2,...,10
+          const active = currentScore > 0 ? s <= currentScore : false
+          const isZero = s === 0
           return (
             <button
               key={s}
@@ -198,7 +199,9 @@ export function FlowReviewCard({
               className={`w-6 h-6 rounded-full text-[10px] font-semibold transition-all duration-150 flex items-center justify-center ${
                 active
                   ? 'bg-accent text-white shadow-sm scale-105'
-                  : 'bg-black/[0.04] text-text-tertiary hover:bg-black/[0.08] hover:text-text-secondary'
+                  : isZero && currentScore === 0
+                    ? 'bg-red-500 text-white shadow-sm scale-105'
+                    : 'bg-black/[0.04] text-text-tertiary hover:bg-black/[0.08] hover:text-text-secondary'
               }`}
               title={`${s}分`}
             >
@@ -208,8 +211,8 @@ export function FlowReviewCard({
         })}
       </div>
       <div className="text-center">
-        <span className={`mono text-sm font-bold ${currentScore > 0 ? 'text-accent' : 'text-text-tertiary'}`}>
-          {currentScore > 0 ? `${currentScore}/10` : '未打分'}
+        <span className={`mono text-sm font-bold ${currentScore > 0 ? 'text-accent' : currentScore === 0 ? 'text-red-500' : 'text-text-tertiary'}`}>
+          {currentScore > 0 ? `${currentScore}/10` : currentScore === 0 ? '0/10' : '未打分'}
         </span>
         <span className="text-[10px] text-text-tertiary ml-2">
           {scoredCount}/{totalCount} 已评

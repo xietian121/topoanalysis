@@ -147,6 +147,17 @@ export function ScoringPanel() {
               </div>
             </section>
             <Separator className="bg-black/5" />
+
+            {/* Start flow button — right below file info */}
+            {!isFlowActive && !useEvalStore.getState().flowReviewScores && autoReport && (
+              <button
+                onClick={handleStartFlow}
+                className="w-full flex items-center justify-center gap-2 rounded-full glass-btn-accent px-4 py-2.5 text-[13px] font-medium text-white transition-all duration-200"
+              >
+                <ListChecks className="h-4 w-4" />
+                开始逐条审核
+              </button>
+            )}
           </>
         )}
 
@@ -157,7 +168,7 @@ export function ScoringPanel() {
               逐条评测
               {isFlowActive && (
                 <span className="ml-1.5 mono text-accent font-semibold">
-                  {Object.values(flowScores).filter((s) => s > 0).length}/{allCriteria.length}
+                  {Object.keys(flowScores).length}/{allCriteria.length}
                 </span>
               )}
             </h4>
@@ -240,7 +251,7 @@ export function ScoringPanel() {
                             isLast={idx === allCriteria.length - 1}
                             allScored={isAllScored(allCriteria, flowScores)}
                             autoReport={autoReport}
-                            scoredCount={Object.values(flowScores).filter((s) => s > 0).length}
+                            scoredCount={Object.keys(flowScores).length}
                             totalCount={allCriteria.length}
                           />
                         </div>
@@ -253,16 +264,7 @@ export function ScoringPanel() {
           </section>
         )}
 
-        {/* Start flow button */}
-        {!isFlowActive && !useEvalStore.getState().flowReviewScores && autoReport && (
-          <button
-            onClick={handleStartFlow}
-            className="w-full flex items-center justify-center gap-2 rounded-full glass-btn-accent px-4 py-2.5 text-[13px] font-medium text-white transition-all duration-200"
-          >
-            <ListChecks className="h-4 w-4" />
-            开始逐条审核
-          </button>
-        )}
+        {/* "开始逐条审核" moved to after file-info section */}
 
         {/* Re-evaluate button (after flow completion, but results shown in header submit) */}
         {!isFlowActive && useEvalStore.getState().flowReviewScores && (

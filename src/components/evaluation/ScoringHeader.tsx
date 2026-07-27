@@ -30,7 +30,7 @@ export function ScoringHeader() {
   const addToast = useToastStore((s) => s.addToast)
 
   const allCriteria = flowCriteria
-  const scoredCount = Object.values(flowScores).filter((s) => s > 0).length
+  const scoredCount = Object.keys(flowScores).length
   const totalCount = allCriteria.length
   const allScored = isAllScored(allCriteria, flowScores)
   const progressPct = totalCount > 0 ? Math.round((scoredCount / totalCount) * 100) : 0

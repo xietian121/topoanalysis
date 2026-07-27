@@ -93,13 +93,13 @@ export function computeAutoScore(
       return roundScore(Math.max(0, maxScore - faceStats.ngonCount))
 
     case 'non-manifold':
-      return roundScore(Math.max(0, maxScore - nonManifold.count * 0.5))
+      return roundScore(Math.max(0, maxScore - nonManifold.count * 1))
 
     case 'overlapping':
-      return roundScore(Math.max(0, maxScore - overlapping.count * 0.5))
+      return roundScore(Math.max(0, maxScore - overlapping.count * 1))
 
     case 'boundary-holes':
-      return roundScore(Math.max(0, maxScore - boundary.count * 0.5))
+      return roundScore(Math.max(0, maxScore - boundary.count * 1))
 
     default:
       return 0

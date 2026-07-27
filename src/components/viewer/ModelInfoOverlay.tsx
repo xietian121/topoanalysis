@@ -6,13 +6,9 @@ import type { OBJFaceData } from '@/lib/model-parser'
 interface ModelStats {
   vertexCount: number
   triangleCount: number
+  quadCount: number
   meshCount: number
   bboxSize: THREE.Vector3
-  materialCount: number
-  /** Number of quad faces from OBJ face data */
-  quadCount?: number
-  /** Number of N-gon faces from OBJ face data */
-  ngonCount?: number
 }
 
 interface ModelInfoOverlayProps {
@@ -25,9 +21,7 @@ interface ModelInfoOverlayProps {
 
 function extractStats(model: THREE.Group, faceData?: OBJFaceData | null): ModelStats {
   let vertexCount = 0
-  let triangleCount = 0
   let meshCount = 0
-  const materials = new Set<THREE.Material>()
   const box = new THREE.Box3()
 
   model.traverse((child) => {
@@ -38,13 +32,6 @@ function extractStats(model: THREE.Group, faceData?: OBJFaceData | null): ModelS
     if (geo instanceof THREE.BufferGeometry) {
       const pos = geo.getAttribute('position')
       if (pos) vertexCount += pos.count
-      const index = geo.getIndex()
-      triangleCount += index ? index.count / 3 : pos ? pos.count / 3 : 0
-    }
-
-    if (child.material) {
-      const mats = Array.isArray(child.material) ? child.material : [child.material]
-      mats.forEach((m) => materials.add(m))
     }
 
     // Compute per-mesh bbox and expand global bbox
@@ -60,28 +47,29 @@ function extractStats(model: THREE.Group, faceData?: OBJFaceData | null): ModelS
   const bboxSize = new THREE.Vector3()
   box.getSize(bboxSize)
 
-  const stats: ModelStats = {
-    vertexCount,
-    triangleCount: Math.floor(triangleCount),
-    meshCount,
-    bboxSize,
-    materialCount: materials.size,
-  }
+  // Use OBJ face data for accurate face-type counts when available
+  let triangleCount = 0
+  let quadCount = 0
 
-  // Add OBJ face data stats if available
   if (faceData) {
     const allFaces = faceData.groups.flat()
-    stats.quadCount = allFaces.filter((f) => f.length === 4).length
-    stats.ngonCount = allFaces.filter((f) => f.length > 4).length
+    triangleCount = allFaces.filter((f) => f.length === 3).length
+    quadCount = allFaces.filter((f) => f.length === 4).length
+  } else {
+    // Fallback: count triangulated faces from geometry
+    model.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return
+      const geo = child.geometry
+      if (geo instanceof THREE.BufferGeometry) {
+        const pos = geo.getAttribute('position')
+        const index = geo.getIndex()
+        triangleCount += index ? index.count / 3 : pos ? pos.count / 3 : 0
+      }
+    })
+    triangleCount = Math.floor(triangleCount)
   }
 
-  return stats
-}
-
-function formatNum(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-  return n.toLocaleString()
+  return { vertexCount, triangleCount, quadCount, meshCount, bboxSize }
 }
 
 export function ModelInfoOverlay({ model, modelInfo: _modelInfo, faceData, label, labelDesc }: ModelInfoOverlayProps) {
@@ -94,20 +82,15 @@ export function ModelInfoOverlay({ model, modelInfo: _modelInfo, faceData, label
 
   const dim = stats.bboxSize
 
-  // Vertical stat rows — rendered by hand for clarity
+  // Vertical stat rows — ordered per user spec:
+  // 顶点 → 三角面 → 四边面 → 包围盒(宽×高×深) → 部件数
   const rows: { label: string; value: string }[] = [
-    { label: '顶点', value: formatNum(stats.vertexCount) },
-    { label: '三角面', value: formatNum(stats.triangleCount) },
-    { label: '部件', value: formatNum(stats.meshCount) },
-    { label: '材质', value: formatNum(stats.materialCount) },
-    { label: '包围盒', value: `${dim.x.toFixed(2)} × ${dim.y.toFixed(2)} × ${dim.z.toFixed(2)}` },
+    { label: '顶点', value: stats.vertexCount.toLocaleString() },
+    { label: '三角面', value: stats.triangleCount.toLocaleString() },
+    { label: '四边面', value: stats.quadCount.toLocaleString() },
+    { label: '包围盒', value: `${dim.x.toFixed(2)}cm 宽 × ${dim.y.toFixed(2)}cm 高 × ${dim.z.toFixed(2)}cm 深` },
+    { label: '部件数', value: stats.meshCount.toLocaleString() },
   ]
-  if (stats.quadCount !== undefined) {
-    rows.push({ label: '四边面', value: stats.quadCount.toLocaleString() })
-  }
-  if (stats.ngonCount !== undefined && stats.ngonCount > 0) {
-    rows.push({ label: 'N-gon', value: stats.ngonCount.toLocaleString() })
-  }
 
   return (
     <div className="absolute top-2 left-2 z-50 pointer-events-none select-none">

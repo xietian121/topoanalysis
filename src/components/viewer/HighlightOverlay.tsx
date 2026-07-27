@@ -21,11 +21,15 @@ const HIGHLIGHT_COLORS: Record<string, string> = {
   'tri-distribution': '#ff9500',  // orange — tri faces
   'ngon-count': '#ff3b30',        // red — N-gon faces
   'overlapping': '#af52de',       // purple — overlapping faces
-  'pole-distribution': '#4a90d9', // blue — pole markers
+  'pole-distribution': '#ff3b30', // red — pole markers (high contrast)
   'non-manifold': '#ff3b30',      // red — non-manifold edges
+  'boundary-holes': '#ff3b30',    // red — boundary/hole edges (x-ray)
   'density': '#4a90d9',           // blue accent — vertex colors override this
   'loop-edges': '#34c759',        // green — edge loops
 }
+
+/** Criteria whose edge lines should render through the model (depthTest: false) */
+const XRAY_CRITERIA = new Set(['boundary-holes'])
 
 // Cached circular texture for pole point markers
 let circleTexture: THREE.Texture | null = null
@@ -169,7 +173,7 @@ export function HighlightOverlay({ model, objFaceData, singleModel }: HighlightO
                   />
                 </bufferGeometry>
                 <pointsMaterial
-                  color="#4a90d9"
+                  color={color}
                   size={0.048}
                   sizeAttenuation
                   map={getCircleTexture()}
@@ -180,13 +184,13 @@ export function HighlightOverlay({ model, objFaceData, singleModel }: HighlightO
               </points>
             )}
 
-            {/* Edge lines (non-manifold / edge loops) */}
+            {/* Edge lines (non-manifold / edge loops / boundary holes) */}
             {lineGeo && (
               <lineSegments geometry={lineGeo} renderOrder={1}>
                 <lineBasicMaterial
                   color={color}
                   linewidth={2}
-                  depthTest
+                  depthTest={!XRAY_CRITERIA.has(criterionId)}
                   depthWrite={false}
                   transparent
                   opacity={0.9}

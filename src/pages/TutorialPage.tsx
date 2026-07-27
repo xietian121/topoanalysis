@@ -81,6 +81,7 @@ export function TutorialPage() {
   const standard = useMemo(() => getStandardByType(evalType), [evalType])
 
   // Load models + run topology analysis
+  // 两个模型并行下载+解析，全部完成后（通过完整性校验）才展示对比界面
   useEffect(() => {
     if (!problemDef || !excellentDef) return
 
@@ -92,47 +93,72 @@ export function TutorialPage() {
         const { parseOBJFile, extractOBJFaceData } = await import('@/lib/model-parser')
         const { analyzeTopology } = await import('@/lib/topology-analyzer')
 
-        // Step 1: Load problem model
-        setLoadStage('正在加载问题模型...')
-        setProgress(5, 'download', '正在加载问题模型...')
-        const probRes = await fetch(problemDef.modelUrl)
-        const probText = await probRes.text()
-        setProgress(20, 'parse', '正在解析问题模型...')
-        const probGroup = await parseOBJFile(new File([probText], 'problem.obj', { type: 'text/plain' }))
-        const probFaceData = extractOBJFaceData(probText)
-        setProgress(30, 'analyze', '正在分析问题模型拓扑...')
-        const probReport = analyzeTopology(probGroup, probFaceData)
-        setProblemModel({
-          group: probGroup, faceData: probFaceData,
-          name: problemDef.name, fileSize: problemDef.record.modelFileSize,
-          report: probReport,
-        })
+        /** 校验模型解析结果：确保包含有效几何体 */
+        function validateModel(group: THREE.Group, label: string): void {
+          let meshCount = 0
+          let totalVerts = 0
+          group.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) {
+              meshCount++
+              const geo = (child as THREE.Mesh).geometry
+              if (geo.getAttribute('position')) {
+                totalVerts += geo.getAttribute('position').count
+              }
+            }
+          })
+          if (meshCount === 0 || totalVerts === 0) {
+            throw new Error(`${label} 解析结果无效（无几何体或顶点数据），请检查文件完整性`)
+          }
+          console.log(`[Tutorial] ${label} 校验通过: ${meshCount} mesh(es), ${totalVerts} verts`)
+        }
 
-        // Step 2: Load excellent model
-        setLoadStage('正在加载优秀模型...')
-        setProgress(50, 'download', '正在加载优秀模型...')
-        const excRes = await fetch(excellentDef.modelUrl)
-        const excText = await excRes.text()
-        setProgress(70, 'parse', '正在解析优秀模型...')
-        const excGroup = await parseOBJFile(new File([excText], 'excellent.obj', { type: 'text/plain' }))
-        const excFaceData = extractOBJFaceData(excText)
-        setProgress(80, 'analyze', '正在分析优秀模型拓扑...')
-        const excReport = analyzeTopology(excGroup, excFaceData)
-        setExcellentModel({
-          group: excGroup, faceData: excFaceData,
-          name: excellentDef.name, fileSize: excellentDef.record.modelFileSize,
-          report: excReport,
-        })
+        /** 加载单个模型：下载 → 解析 → 拓扑分析 → 校验 */
+        async function loadOne(
+          def: NonNullable<typeof problemDef>,
+          label: string,
+          startPct: number,
+        ): Promise<LoadedModel> {
+          setLoadStage(`正在下载${label}...`)
+          setProgress(startPct, 'download', `正在下载${label}...`)
+          const res = await fetch(def.modelUrl)
+          if (!res.ok) throw new Error(`${label} 下载失败 (HTTP ${res.status})`)
+          const text = await res.text()
+          if (!text || text.length < 100) throw new Error(`${label} 文件内容为空或不完整`)
 
-        setProgress(100, 'done', '加载完成')
-        finishLoading()
-        setLoading(false)
+          setProgress(startPct + 10, 'parse', `正在解析${label}...`)
+          const group = await parseOBJFile(new File([text], `${def.id}.obj`, { type: 'text/plain' }))
+          const faceData = extractOBJFaceData(text)
+
+          setProgress(startPct + 15, 'analyze', `正在分析${label}拓扑...`)
+          const report = analyzeTopology(group, faceData)
+
+          validateModel(group, label)
+
+          return {
+            group, faceData,
+            name: def.name, fileSize: def.record.modelFileSize,
+            report,
+          }
+        }
+
+        // 两个模型并行加载，全部完成后才继续
+        setLoadStage('正在加载对比模型...')
+        setProgress(0, 'download', '正在并行下载两个模型...')
+        const [probResult, excResult] = await Promise.all([
+          loadOne(problemDef, '问题案例', 5),
+          loadOne(excellentDef, '优秀案例', 45),
+        ])
+
+        // 一次性更新所有状态
+        setProblemModel(probResult)
+        setExcellentModel(excResult)
+        setProgress(85, 'analyze', '模型加载完成')
         setLoadStage('')
 
-        // Trigger AI comparison with augmented records
+        // 触发 AI 对比分析
         setAiLoading(true)
-        const probAugmented = { ...problemDef.record, autoReport: probReport }
-        const excAugmented = { ...excellentDef.record, autoReport: excReport }
+        const probAugmented = { ...problemDef.record, autoReport: probResult.report }
+        const excAugmented = { ...excellentDef.record, autoReport: excResult.report }
         try {
           const result = await generateAICompareAnalysis(probAugmented, excAugmented)
           setAiResult(result)
@@ -142,9 +168,14 @@ export function TutorialPage() {
         } finally {
           setAiLoading(false)
         }
+
+        setProgress(100, 'done', '加载完成')
+        finishLoading()
+        setLoading(false)
       } catch (err) {
         console.error('Model load error:', err)
         setError(err instanceof Error ? err.message : '模型加载失败')
+        finishLoading()
         setLoading(false)
       }
     }

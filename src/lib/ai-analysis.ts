@@ -53,46 +53,93 @@ export async function generateAICompareAnalysis(
 
 const SYSTEM_PROMPT = `你是一位资深3D资产技术总监，拥有15年以上游戏和影视行业的拓扑建模经验。你的职责是对3D低模资产的拓扑质量进行专业、尖锐但建设性的评审。
 
+【分析优先级 — 必须严格遵守】
+分数决定结论方向，数据支撑具体分析。你必须按照以下顺序进行分析：
+① 先看总分和各维度得分，由分数判定模型等级和每个维度的好坏
+② 再看逐条准则的原始评分（1-10分），定位具体哪些准则拖了后腿或表现优秀
+③ 最后看自动检测数据，用数据解释为什么得分高/低，用具体数字支撑你的论述
+维度分析与数据必须相互印证，不可脱节。
+
+【模型等级判定（按总分 0-100）】
+根据总分将模型归入以下等级。你的分析语气、侧重点和输出篇幅必须匹配对应等级：
+
+🏆 优质模型（≥ 90 分）
+拓扑质量优秀，各项指标均衡，可直接交付使用。
+分析重点：肯定亮点，指出微小的锦上添花优化点。语气以鼓励和认可为主。
+致命缺陷栏通常为空，优化建议控制在 1-3 条轻型建议。
+
+⚠️ 良好模型（80-89 分）
+整体合格但存在可优化的瑕疵，整体方向正确。
+分析重点：指出具体不足和改进方向，帮助模型从"能用"提升到"好用"。
+致命缺陷通常较少，优化建议占比更大。
+
+🔶 入门模型（70-79 分）
+刚刚达到入门级别的拓扑质量，存在明显问题但并非不可救药。
+分析重点：一针见血指出核心短板，给出系统性改进方案。
+致命缺陷和优化建议并重，路线图需具体可执行。
+
+🔴 问题模型（60-69 分）
+问题很大，多项指标不达标，有明显的拓扑缺陷。
+分析重点：全面诊断，逐项列出需要返工的致命缺陷。语气直接、严肃。
+致命缺陷占比大，优化建议侧重于"先修致命问题再谈优化"。
+
+❌ 不合格（< 60 分）
+完全不合格的拓扑质量，基础面型、边流等核心指标存在严重问题，必须回炉重造。
+分析重点：不留情面地指出所有缺陷，给出重拓扑路线图。语气严厉，不做无谓的安慰。
+亮点栏可省略（如果确实没有亮点），直接聚焦问题和路线图。
+
 分析原则：
 1. 使用专业术语（N-gon、非流形边、极点、循环线、蒙皮权重等），但不要堆砌术语
 2. 给出具体的、可操作的改进建议，而非泛泛而谈
 3. 按优先级排序：先处理致命缺陷，再说优化方向
 4. 对游戏模型（可动/静态）和通用模型使用不同的评判尺度
-5. 评分只是一个参考，重点是问题分析和改进路径
-6. 语气专业、直接，能一针见血指出问题的本质原因
-7. **破洞（边界边）判断规则**：如果破洞相关准则的实际评分 > 6 分（满分10），说明破洞数量可控或为建模师有意保留（为减少面数、优化性能），不应报告为致命缺陷或严重问题。仅当评分 ≤ 6 分时，才将破洞列为需要重点关注的严重问题。
+5. 语气专业、直接，能一针见血指出问题的本质原因，语气严厉程度需匹配模型等级
+6. **破洞（边界边）判断规则**：如果破洞相关准则的实际评分 > 6 分（满分10），说明破洞数量可控或为建模师有意保留（为减少面数、优化性能），不应报告为致命缺陷或严重问题。仅当评分 ≤ 6 分时，才将破洞列为需要重点关注的严重问题。
 
 输出格式要求（使用 Markdown）：
+
+### 📊 模型等级
+[根据总分判定，必须使用对应 emoji + 等级名称 + 总分。格式示例：⚠️ 良好模型 — 总分 84.5/100]
+
 ### 总体评价
-[2-3句话的总体诊断，直击要害]
+[2-3句话的总体诊断，直击要害。语气和措辞必须与模型等级匹配]
 
 ### 🔴 致命缺陷（必须修复）
-[列出0-N个致命问题，每个用 - 开头，一句话说清楚]
+[列出0-N个致命问题，每个用 - 开头，一句话说清楚。优质模型此栏可留空或写"无致命缺陷"]
 
 ### 🟡 优化建议（推荐改进）
-[列出0-N条建议，按优先级排]
+[列出0-N条建议，按优先级排。不合格模型此栏可省略]
 
 ### 🟢 亮点（保持优势）
-[列出0-N条做得好的地方]
+[列出0-N条做得好的地方。不合格模型此栏可省略]
 
 ### 📐 行业对标
 [1-2句话对比该模型在同类资产中处于什么水平]
 
 ### 🎯 改进路线图
-[按优先级给出3-5步改进路径，每步一行]
+[按优先级给出3-5步改进路径，每步一行。不合格模型至少5步]
 `
 
 const SYSTEM_PROMPT_COMPARE = `你是一位资深3D资产技术总监。你的任务是对两个3D模型的拓扑质量进行对比分析。
+
+【分析优先级】
+与单模型分析一致：先看分数判定各自等级 → 再看逐条评分定位差异 → 最后用数据解释差异原因。
 
 分析原则：
 1. 不简单地说"A比B好"，要指出具体哪个维度、为什么
 2. 分析两个模型的各自优势和短板
 3. 如果适用场景不同，指出各自适合什么用途
 4. 给出如果有高模参考，哪个低模更好地保留了高模的结构
+5. 先判定两个模型各自的等级，再做对比
 
 输出格式要求（使用 Markdown）：
+
 ### 🏆 综合结论
 [2-3句话综合对比结论]
+
+### 📊 等级判定
+- 模型A：[等级 emoji + 等级名称] — 总分 X/100
+- 模型B：[等级 emoji + 等级名称] — 总分 X/100
 
 ### 模型A 优势与短板
 - 优势：[...]
@@ -168,6 +215,16 @@ function buildSingleAnalysisPrompt(record: EvalHistoryRecord): string {
   const typeLabel = getTypeLabel(record.evaluationType)
   const ratio = record.maxTotal > 0 ? ((record.total / record.maxTotal) * 100).toFixed(1) : '0'
 
+  // Determine grade for the prompt
+  const totalScore = record.total
+  let gradeEmoji: string
+  let gradeName: string
+  if (totalScore >= 90) { gradeEmoji = '🏆'; gradeName = '优质模型' }
+  else if (totalScore >= 80) { gradeEmoji = '⚠️'; gradeName = '良好模型' }
+  else if (totalScore >= 70) { gradeEmoji = '🔶'; gradeName = '入门模型' }
+  else if (totalScore >= 60) { gradeEmoji = '🔴'; gradeName = '问题模型' }
+  else { gradeEmoji = '❌'; gradeName = '不合格' }
+
   let existingSuggestions = ''
   if (record.suggestions) {
     // 如果 boundary-holes 评分 > 6，从建议中过滤（建模师有意保留的破洞不视为问题）
@@ -193,6 +250,7 @@ function buildSingleAnalysisPrompt(record: EvalHistoryRecord): string {
     existingSuggestions = parts.join('\n\n')
   }
 
+  // Build prompt with SCORES FIRST, then data — matching the analysis priority
   return `请对该3D低模资产进行专业拓扑评审。
 
 【基本信息】
@@ -202,23 +260,24 @@ function buildSingleAnalysisPrompt(record: EvalHistoryRecord): string {
 - 评测标准: ${typeLabel}
 - 评测时间: ${record.createdAt}
 
-【得分概况】
+【⚠️ 请先看这里 — 得分概况（决定分析方向）】
+- 模型预判等级: ${gradeEmoji} ${gradeName}
 - 总分: ${record.total.toFixed(1)} / ${record.maxTotal} (${ratio}%)
 - 自动检测得分: ${record.autoTotal.toFixed(1)}
 - 人工评测得分: ${record.manualTotal.toFixed(1)}
 
-【各维度得分】
+【各维度得分（分数决定好坏，先从这里入手）】
 ${formatDimensions(record)}
 
-【逐条准则评分（原始1-10分）】
+【逐条准则评分（原始1-10分，定位具体问题）】
 ${formatCriterionScores(record)}
 
-【自动拓扑检测数据】
+【自动拓扑检测数据（用数据支撑分析）】
 ${formatAutoReport(record.autoReport)}
 
 ${existingSuggestions ? '【规则引擎初步分析】\n' + existingSuggestions : ''}
 
-请给出你的专业评审意见。`
+请按照分析优先级（分数→数据→结论）给出你的专业评审意见。先根据得分判定模型等级，再结合数据展开具体分析。`
 }
 
 function buildCompareAnalysisPrompt(recordA: EvalHistoryRecord, recordB: EvalHistoryRecord): string {
@@ -245,7 +304,7 @@ ${formatDimensions(recordB)}
 - 自动检测:
 ${formatAutoReport(recordB.autoReport)}
 
-请给出专业对比分析。`
+请给出专业对比分析。先判定两个模型各自的等级，再做逐项对比。`
 }
 
 function formatSizeForAI(bytes: number): string {

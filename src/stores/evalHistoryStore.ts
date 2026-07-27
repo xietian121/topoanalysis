@@ -94,31 +94,69 @@ export const useEvalHistoryStore = create<EvalHistoryStore>()(
     }),
     {
       name: 'topoeval-history',
-      version: 2,
+      version: 3,
+      // Strip large geometry data before persisting to avoid localStorage quota
+      partialize: (state) => ({
+        ...state,
+        records: state.records.map((r) => ({
+          ...r,
+          // modelText can be MBs — never persist OBJ file content
+          modelText: undefined,
+          // Strip geometry arrays from autoReport, keep only counts
+          autoReport: r.autoReport ? stripAutoReportForStorage(r.autoReport) : null,
+        })),
+      }),
       // Migration from v1: old modelType 'static'|'dynamic' → 'game-static'|'game-dynamic'
+      // Migration from v2→v3: records may have modelText/autoReport stripped, hydrate safely
       migrate: (persistedState: unknown, version: number) => {
+        const state = persistedState as EvalHistoryStore & { records: EvalHistoryRecord[] }
+        if (!state.records) state.records = []
+
         if (version < 2) {
-          const state = persistedState as { records: EvalHistoryRecord[] }
-          if (state.records) {
-            state.records = state.records.map((r) => {
-              // Migrate old modelType field
-              const oldType = (r as unknown as { modelType?: string }).modelType
-              if (oldType === 'static' || oldType === 'dynamic') {
-                r.evaluationType = `game-${oldType}` as EvaluationType
-                delete (r as unknown as { modelType?: string }).modelType
-              }
-              if (!r.evaluationType) {
-                r.evaluationType = 'game-static'
-              }
-              if (!r.evalStatus) {
-                r.evalStatus = 'completed'
-              }
-              return r
-            })
-          }
+          state.records = state.records.map((r) => {
+            const oldType = (r as unknown as { modelType?: string }).modelType
+            if (oldType === 'static' || oldType === 'dynamic') {
+              r.evaluationType = `game-${oldType}` as EvaluationType
+              delete (r as unknown as { modelType?: string }).modelType
+            }
+            if (!r.evaluationType) {
+              r.evaluationType = 'game-static'
+            }
+            if (!r.evalStatus) {
+              r.evalStatus = 'completed'
+            }
+            return r
+          })
         }
-        return persistedState as EvalHistoryStore
+
+        if (version < 3) {
+          // v3: modelText and autoReport geometry stripped on persist;
+          // ensure old records are clean too
+          state.records = state.records.map((r) => ({
+            ...r,
+            modelText: undefined,
+            autoReport: r.autoReport ? stripAutoReportForStorage(r.autoReport) : null,
+          }))
+        }
+
+        return state as EvalHistoryStore
       },
     },
   ),
 )
+
+/** Keep only summary counts from autoReport; discard all geometry position arrays. */
+function stripAutoReportForStorage(report: TopologyReport): TopologyReport {
+  return {
+    faceStats: report.faceStats,
+    vertexCount: report.vertexCount,
+    nonManifold: { count: report.nonManifold.count, edges: [] },
+    overlapping: { count: report.overlapping.count, pairs: [] },
+    boundary: { count: report.boundary.count, edges: [] },
+    poleStats: { count: report.poleStats.count, poles: [] },
+    // density: stripped entirely (Float32Array + large Map)
+    density: undefined,
+    // edgeLoops: stripped entirely (potentially hundreds of edge positions)
+    edgeLoops: undefined,
+  }
+}

@@ -60,6 +60,7 @@ const SYSTEM_PROMPT = `你是一位资深3D资产技术总监，拥有15年以�
 4. 对游戏模型（可动/静态）和通用模型使用不同的评判尺度
 5. 评分只是一个参考，重点是问题分析和改进路径
 6. 语气专业、直接，能一针见血指出问题的本质原因
+7. **破洞（边界边）判断规则**：如果破洞相关准则的实际评分 > 6 分（满分10），说明破洞数量可控或为建模师有意保留（为减少面数、优化性能），不应报告为致命缺陷或严重问题。仅当评分 ≤ 6 分时，才将破洞列为需要重点关注的严重问题。
 
 输出格式要求（使用 Markdown）：
 ### 总体评价
@@ -130,6 +131,29 @@ function formatDimensions(record: EvalHistoryRecord): string {
   }).join('\n')
 }
 
+/** Per-criterion raw scores (1-10) so the AI can apply threshold-based rules */
+function formatCriterionScores(record: EvalHistoryRecord): string {
+  if (!record.reviewScores || Object.keys(record.reviewScores).length === 0) return '无逐条评分数据'
+  // Map criterion IDs to human-readable names
+  const nameMap: Record<string, string> = {
+    'quad-tri-ratio': '四边/三角面比例',
+    'tri-distribution': '三角面分布合理性',
+    'pole-distribution': '极点分布',
+    'ngon-count': '多边形面(N-gon)',
+    'non-manifold': '非流形边',
+    'overlapping': '重叠面',
+    'boundary-holes': '破洞面(边界边)',
+    'density': '平坦区域面数控制',
+    'structure': '结构跟随性',
+    'loop-edges': '循环线完整性',
+    'joint-density': '关节区域面数倾斜',
+    'joint-loop-edges': '可动部位环形线',
+  }
+  return Object.entries(record.reviewScores)
+    .map(([id, score]) => `- ${nameMap[id] ?? id}: ${score}/10`)
+    .join('\n')
+}
+
 function getTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     'game-static': '游戏·静态模型',
@@ -172,6 +196,9 @@ function buildSingleAnalysisPrompt(record: EvalHistoryRecord): string {
 
 【各维度得分】
 ${formatDimensions(record)}
+
+【逐条准则评分（原始1-10分）】
+${formatCriterionScores(record)}
 
 【自动拓扑检测数据】
 ${formatAutoReport(record.autoReport)}

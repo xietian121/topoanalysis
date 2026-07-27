@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator'
 import { ViewerCanvas } from '@/components/viewer/ViewerCanvas'
 import { ViewerToolbar } from '@/components/viewer/ViewerToolbar'
 import { useEvalHistoryStore } from '@/stores/evalHistoryStore'
+import { useEvalStore } from '@/stores/evalStore'
 import { useModelStore } from '@/stores/modelStore'
 import { useHighlightStore } from '@/stores/highlightStore'
 import { useLoadingStore } from '@/stores/loadingStore'
@@ -197,6 +198,17 @@ export function ReportPage() {
   const [aiError, setAiError] = useState<string | null>(null)
   const aiTriggered = useRef(false)
 
+  // 示例模型的 autoReport 在运行时由 topology analyzer 生成（evalStore），不在预定义 record 中
+  const runtimeAutoReport = useEvalStore((s) => s.autoReport)
+  const effectiveAutoReport = record?.autoReport || runtimeAutoReport
+
+  // Also use effective autoReport for display (DimensionAccordion etc.)
+  const displayRecord = useMemo(() => {
+    if (!record) return null
+    if (record.autoReport || !effectiveAutoReport) return record
+    return { ...record, autoReport: effectiveAutoReport }
+  }, [record, effectiveAutoReport])
+
   useEffect(() => {
     if (!record || aiTriggered.current) return
     // 如果已有缓存的 AI 分析，直接使用
@@ -204,14 +216,16 @@ export function ReportPage() {
       setAiResult(record.aiAnalysis)
       return
     }
-    // 只有有自动检测数据的记录才触发 AI 分析
-    if (!record.autoReport) return
+    // 需要自动检测数据才能触发 AI 分析（示例模型从 evalStore 获取运行时数据）
+    if (!effectiveAutoReport) return
 
     aiTriggered.current = true
     setAiLoading(true)
     setAiError(null)
 
-    generateAIAnalysis(record)
+    // 使用有效的 autoReport 进行 AI 分析
+    const recordForAI = record.autoReport ? record : { ...record, autoReport: effectiveAutoReport }
+    generateAIAnalysis(recordForAI)
       .then((result) => {
         setAiResult(result)
         updateRecord(record.id, { aiAnalysis: result })
@@ -221,7 +235,7 @@ export function ReportPage() {
         setAiError(err instanceof Error ? err.message : 'AI 分析服务暂时不可用')
       })
       .finally(() => setAiLoading(false))
-  }, [record, updateRecord])
+  }, [record, effectiveAutoReport, updateRecord])
 
   // Clean up highlight on unmount
   useEffect(() => {
@@ -429,7 +443,7 @@ export function ReportPage() {
             <DimensionAccordion
               dimensions={dimensionAccordionData}
               reviewScores={record.reviewScores}
-              autoReport={record.autoReport}
+              autoReport={displayRecord?.autoReport ?? null}
               onCriterionClick={handleHighlight}
             />
           </section>

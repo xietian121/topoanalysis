@@ -7,6 +7,7 @@ import { useModelStore } from '@/stores/modelStore'
 import { useCompareStore } from '@/stores/compareStore'
 import { getHighlightData } from '@/lib/highlight-data'
 import type { OBJFaceData } from '@/lib/model-parser'
+import type { TopologyReport } from '@/lib/topology-analyzer'
 
 interface HighlightOverlayProps {
   /** Model to highlight on */
@@ -15,6 +16,8 @@ interface HighlightOverlayProps {
   objFaceData?: OBJFaceData | null
   /** If true, read model from modelStore (single view), else from compareStore (low model) */
   singleModel?: boolean
+  /** External autoReport override — used when multiple viewports need different highlight data */
+  autoReportOverride?: TopologyReport | null
 }
 
 const HIGHLIGHT_COLORS: Record<string, string> = {
@@ -79,12 +82,15 @@ function getModelNormalization(model: THREE.Group): {
   }
 }
 
-export function HighlightOverlay({ model, objFaceData, singleModel }: HighlightOverlayProps) {
+export function HighlightOverlay({ model, objFaceData, singleModel, autoReportOverride }: HighlightOverlayProps) {
   const criterionId = useHighlightStore((s) => s.criterionId)
-  const autoReport = useEvalStore((s) => s.autoReport)
+  const storeAutoReport = useEvalStore((s) => s.autoReport)
   const singleObjFaceData = useModelStore((s) => s.objFaceData)
   const singleModelObject = useModelStore((s) => s.modelObject)
   const lowModel = useCompareStore((s) => s.lowModel)
+
+  // autoReport: external override takes priority (for multi-viewport comparison), fallback to store
+  const autoReport = autoReportOverride ?? storeAutoReport
 
   // Resolve which model and faceData to use
   const effectiveModel = model ?? (singleModel ? singleModelObject : lowModel.object)

@@ -5,6 +5,7 @@ import { CompareScene } from './CompareScene'
 import * as THREE from 'three'
 import type { RenderMode } from '@/types/viewer'
 import type { OBJFaceData } from '@/lib/model-parser'
+import type { TopologyReport } from '@/lib/topology-analyzer'
 
 interface CompareCanvasProps {
   model: THREE.Group | null
@@ -18,6 +19,8 @@ interface CompareCanvasProps {
   forceSolid?: boolean
   /** 结构跟随性叠加模式：在此 model 上方叠加半透明低模 */
   overlayModel?: THREE.Group | null
+  /** External autoReport for highlight overlay (multi-viewport comparison) */
+  highlightAutoReport?: TopologyReport | null
 }
 
 export function CompareCanvas({
@@ -31,6 +34,7 @@ export function CompareCanvas({
   objFaceData,
   forceSolid,
   overlayModel,
+  highlightAutoReport,
 }: CompareCanvasProps) {
   return (
     <div className="relative w-full h-full bg-[#e8e8ed]">
@@ -55,6 +59,7 @@ export function CompareCanvas({
             objFaceData={objFaceData}
             forceSolid={forceSolid}
             overlayModel={overlayModel}
+            highlightAutoReport={highlightAutoReport}
           />
         </Suspense>
       </Canvas>

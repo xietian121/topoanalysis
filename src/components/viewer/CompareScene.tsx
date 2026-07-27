@@ -5,6 +5,7 @@ import { SyncedOrbitControls } from './SyncedOrbitControls'
 import * as THREE from 'three'
 import type { RenderMode } from '@/types/viewer'
 import type { OBJFaceData } from '@/lib/model-parser'
+import type { TopologyReport } from '@/lib/topology-analyzer'
 
 interface CompareSceneProps {
   model: THREE.Group | null
@@ -19,6 +20,8 @@ interface CompareSceneProps {
   forceSolid?: boolean
   /** 结构跟随性叠加模式：在此 model 上方叠加半透明低模 */
   overlayModel?: THREE.Group | null
+  /** External autoReport for highlight overlay (multi-viewport comparison) */
+  highlightAutoReport?: TopologyReport | null
 }
 
 export function CompareScene({
@@ -32,6 +35,7 @@ export function CompareScene({
   objFaceData,
   forceSolid,
   overlayModel,
+  highlightAutoReport,
 }: CompareSceneProps) {
   return (
     <>
@@ -108,9 +112,13 @@ export function CompareScene({
         </>
       )}
 
-      {/* Highlight overlay — only on low-poly (right) side, skip in overlay mode */}
-      {side === 'right' && model && !overlayModel && (
-        <HighlightOverlay model={model} objFaceData={objFaceData} />
+      {/* Highlight overlay — renders on both sides when highlightAutoReport is provided,
+          otherwise falls back to legacy right-side-only behavior using evalStore */}
+      {model && !overlayModel && (highlightAutoReport !== undefined
+        ? highlightAutoReport !== null
+        : side === 'right'
+      ) && (
+        <HighlightOverlay model={model} objFaceData={objFaceData} autoReportOverride={highlightAutoReport} />
       )}
     </>
   )

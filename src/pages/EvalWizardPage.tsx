@@ -6,6 +6,7 @@ import { useEvalStore } from '@/stores/evalStore'
 import { useModelStore } from '@/stores/modelStore'
 import { useLoadingStore } from '@/stores/loadingStore'
 import { ModelDropZone } from '@/components/viewer/ModelDropZone'
+import { LOW_POLY_MODEL_FORMATS, HIGH_POLY_MODEL_FORMATS, HIGH_POLY_MAX_FILE_SIZE_MB } from '@/lib/constants'
 import { MODEL_USAGE_LABELS, MODEL_ANIMATION_LABELS, type ModelUsage, type ModelAnimation } from '@/types/evaluation'
 
 const STEPS = ['选择用途', '选择动效', '上传模型']
@@ -287,7 +288,8 @@ export function EvalWizardPage() {
                     error={error}
                     onFilesAccepted={handleLowFileAccepted}
                     label="拖放待评测的低模文件到此处"
-                    description="支持 OBJ / FBX — 最大 100MB"
+                    description="仅支持 OBJ 格式 — 最大 100MB"
+                    acceptFormats={LOW_POLY_MODEL_FORMATS}
                   />
                 ) : (
                   <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-emerald-200/50 p-4">
@@ -331,7 +333,9 @@ export function EvalWizardPage() {
                     error={highError}
                     onFilesAccepted={handleHighFileAccepted}
                     label="拖放参考高模文件到此处"
-                    description="支持 OBJ / FBX — 用于同屏对比"
+                    description="支持 OBJ / FBX — 最大 1024MB"
+                    maxSizeMB={HIGH_POLY_MAX_FILE_SIZE_MB}
+                    acceptFormats={HIGH_POLY_MODEL_FORMATS}
                   />
                 ) : (
                   <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-emerald-200/50 p-4">

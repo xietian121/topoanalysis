@@ -63,49 +63,44 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
     console.log(`[TopoEval] 开始加载模型: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`)
 
     try {
-      const { parseOBJFile, parseFBXFile, extractModelStats, extractOBJFaceData } =
+      const { parseOBJFile, extractModelStats, extractOBJFaceData } =
         await import('@/lib/model-parser')
       const { analyzeTopology } = await import('@/lib/topology-analyzer')
 
-      const ext = file.name.split('.').pop()?.toLowerCase() as 'obj' | 'fbx'
+      const ext = file.name.split('.').pop()?.toLowerCase()
       console.log(`[TopoEval] 文件格式: .${ext}`)
+
+      // 低模仅支持 OBJ — FBX 无法进行拓扑分析（extractOBJFaceData）
+      if (ext !== 'obj') {
+        throw new Error('低模评测仅支持 OBJ 格式，请上传 .obj 文件')
+      }
 
       let group: THREE.Group
       let objFaceData: OBJFaceData | null = null
       let modelText: string | null = null
 
-      if (ext === 'obj') {
-        // Download progress: 0-40%
-        onProgress?.(5, 'download', '正在下载模型文件...')
+      // Download progress: 0-40%
+      onProgress?.(5, 'download', '正在下载模型文件...')
 
-        // Check for abort
-        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      // Check for abort
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
 
-        const text = await file.text()
-        modelText = text
-        onProgress?.(35, 'download', '正在下载模型文件...')
+      const text = await file.text()
+      modelText = text
+      onProgress?.(35, 'download', '正在下载模型文件...')
 
-        // Parse: 40-60%
-        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-        onProgress?.(40, 'parse', '正在解析模型数据...')
-        group = await parseOBJFile(file)
-        objFaceData = extractOBJFaceData(text)
-        const allFaces = objFaceData.groups.flat()
-        const quads = allFaces.filter((f) => f.length === 4).length
-        const tris = allFaces.filter((f) => f.length === 3).length
-        console.log(
-          `[TopoEval] OBJ 原始面: ${allFaces.length} 个 (${tris}三角, ${quads}四边) in ${objFaceData.groups.length} 组`,
-        )
-        onProgress?.(60, 'parse', '正在解析模型数据...')
-      } else if (ext === 'fbx') {
-        onProgress?.(30, 'download', '正在下载模型文件...')
-        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-        onProgress?.(50, 'parse', '正在解析模型数据...')
-        group = await parseFBXFile(file)
-        onProgress?.(60, 'parse', '正在解析模型数据...')
-      } else {
-        throw new Error(`不支持的模型格式: .${ext}`)
-      }
+      // Parse: 40-60%
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      onProgress?.(40, 'parse', '正在解析模型数据...')
+      group = await parseOBJFile(file)
+      objFaceData = extractOBJFaceData(text)
+      const allFaces = objFaceData.groups.flat()
+      const quads = allFaces.filter((f) => f.length === 4).length
+      const tris = allFaces.filter((f) => f.length === 3).length
+      console.log(
+        `[TopoEval] OBJ 原始面: ${allFaces.length} 个 (${tris}三角, ${quads}四边) in ${objFaceData.groups.length} 组`,
+      )
+      onProgress?.(60, 'parse', '正在解析模型数据...')
 
       // Analyze topology: 60-90%, 7 steps
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')

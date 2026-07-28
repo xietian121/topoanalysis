@@ -9,6 +9,7 @@ interface ModelDropZoneProps {
   label?: string
   description?: string
   maxSizeMB?: number
+  acceptFormats?: string[]
 }
 
 export function ModelDropZone({
@@ -16,11 +17,12 @@ export function ModelDropZone({
   error,
   onFilesAccepted,
   label = '拖放模型文件到此处',
-  description = '支持 OBJ 格式（推荐）和 FBX 格式（实验性）',
+  description = '支持 OBJ 格式',
   maxSizeMB = MAX_FILE_SIZE_MB,
+  acceptFormats = ACCEPTED_MODEL_FORMATS,
 }: ModelDropZoneProps) {
   const { isDragOver, dropZoneProps, getInputProps } = useDragAndDrop({
-    acceptFormats: ACCEPTED_MODEL_FORMATS,
+    acceptFormats,
     onFilesAccepted: (files) => {
       const maxBytes = maxSizeMB * 1024 * 1024
       const oversized = files.filter((f) => f.size > maxBytes)

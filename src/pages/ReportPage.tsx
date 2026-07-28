@@ -265,12 +265,40 @@ export function ReportPage() {
     setHighlight(criterionId)
   }, [setHighlight])
 
-  const handleRescore = useCallback(() => {
+  const handleRescore = useCallback(async () => {
     if (!record) return
     if (!window.confirm('重新打分将覆盖当前评测结果，确定吗？')) return
 
-    // Model is already loaded in store, navigate directly
-    navigate('/viewer/single')
+    const modelStore = useModelStore.getState()
+    const loadingStore = useLoadingStore.getState()
+
+    // Case 1: 模型已加载 → 直接跳转
+    if (modelStore.modelObject && modelStore.currentModel?.name === record.modelName) {
+      navigate('/viewer/single')
+      return
+    }
+
+    // Case 2: 有 modelUrl → 重新加载
+    if (record.modelUrl) {
+      try {
+        loadingStore.startLoading()
+        await modelStore.loadModelFromUrl(record.modelUrl, record.modelName, {
+          onProgress: (progress, stage, text) => {
+            loadingStore.setProgress(progress, stage as 'download' | 'parse' | 'analyze' | 'init' | 'done', text)
+          },
+          isExample: record.isExample,
+        })
+        loadingStore.finishLoading()
+        navigate('/viewer/single')
+      } catch (err) {
+        console.error('重新打分加载模型失败:', err)
+        loadingStore.setError(err instanceof Error ? err.message : '模型加载失败，无法重新打分')
+      }
+      return
+    }
+
+    // Case 3: 无模型数据 → 提示
+    alert('模型数据已过期，请通过首页"我的模型"重新上传后再评测。')
   }, [record, navigate])
 
   // ────── Not Found ──────

@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, ArrowRight, Gamepad2, Palette, Bone, Box, BarChart4, ClipboardCheck, Search, Clock } from 'lucide-react'
+import { Upload, ArrowRight, Gamepad2, Palette, Bone, Box, BarChart4, ClipboardCheck, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ModelCardThumbnail } from '@/components/viewer/ModelCardThumbnail'
 import { APP_TITLE } from '@/lib/constants'
@@ -13,6 +13,7 @@ import { MODEL_TYPE_LABELS, type EvaluationType } from '@/types/evaluation'
 
 type FilterUsage = 'all' | 'game' | 'general'
 type FilterAnimation = 'all' | 'static' | 'dynamic'
+type FilterEvalStatus = 'all' | 'evaluated' | 'unevaluated'
 
 function ModelCard({ record, isExample, modelUrl, onClick }: {
   record: EvalHistoryRecord
@@ -60,6 +61,14 @@ function ModelCard({ record, isExample, modelUrl, onClick }: {
           {isExample && (
             <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-accent/10 text-accent">示例</span>
           )}
+          {/* 评测状态标签 */}
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+            record.evalStatus === 'completed' || record.total > 0
+              ? 'bg-emerald-50 text-emerald-600'
+              : 'bg-slate-100 text-slate-500'
+          }`}>
+            {record.evalStatus === 'completed' || record.total > 0 ? '已评测' : '未评测'}
+          </span>
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
             isGame ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
           }`}>
@@ -121,12 +130,6 @@ function ModelCard({ record, isExample, modelUrl, onClick }: {
           </div>
         )}
 
-        {record.evalStatus !== 'completed' && (
-          <div className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
-            <Clock className="h-3 w-3" />
-            <span>未评测</span>
-          </div>
-        )}
       </div>
     </button>
   )
@@ -144,21 +147,25 @@ export function DashboardPage() {
 
   const [userUsage, setUserUsage] = useState<FilterUsage>('all')
   const [userAnimation, setUserAnimation] = useState<FilterAnimation>('all')
+  const [userEvalStatus, setUserEvalStatus] = useState<FilterEvalStatus>('all')
 
   // Filter helpers
-  function filterRecords(records: EvalHistoryRecord[], usage: FilterUsage, animation: FilterAnimation) {
+  function filterRecords(records: EvalHistoryRecord[], usage: FilterUsage, animation: FilterAnimation, evalStatus: FilterEvalStatus) {
     return records.filter((r) => {
       const rUsage = r.evaluationType?.startsWith('game-') ? 'game' : 'general'
       const rAnim = r.evaluationType?.endsWith('-dynamic') ? 'dynamic' : 'static'
+      const isEvaluated = r.evalStatus === 'completed' || r.total > 0
       if (usage !== 'all' && rUsage !== usage) return false
       if (animation !== 'all' && rAnim !== animation) return false
+      if (evalStatus === 'evaluated' && !isEvaluated) return false
+      if (evalStatus === 'unevaluated' && isEvaluated) return false
       return true
     })
   }
 
   const filteredUserModels = useMemo(
-    () => filterRecords(userRecords, userUsage, userAnimation),
-    [userRecords, userUsage, userAnimation],
+    () => filterRecords(userRecords, userUsage, userAnimation, userEvalStatus),
+    [userRecords, userUsage, userAnimation, userEvalStatus],
   )
 
   const handleCardClick = useCallback(async (record: EvalHistoryRecord) => {
@@ -436,6 +443,7 @@ export function DashboardPage() {
                       <div className="rounded-lg overflow-hidden border border-emerald-200/40">
                         <div className="aspect-[3/2] bg-[#e8e8ed] relative">
                           <ModelCardThumbnail modelUrl={excellent.modelUrl} />
+                          <span className="absolute top-1.5 left-1.5 text-[10px] px-1.5 py-0.5 rounded font-medium bg-emerald-50 text-emerald-600">已评测</span>
                         </div>
                         <div className="px-2.5 py-2 flex items-center justify-between">
                           <div className="min-w-0">
@@ -461,6 +469,7 @@ export function DashboardPage() {
                       <div className="rounded-lg overflow-hidden border border-red-200/40">
                         <div className="aspect-[3/2] bg-[#e8e8ed] relative">
                           <ModelCardThumbnail modelUrl={problematic.modelUrl} />
+                          <span className="absolute top-1.5 left-1.5 text-[10px] px-1.5 py-0.5 rounded font-medium bg-emerald-50 text-emerald-600">已评测</span>
                         </div>
                         <div className="px-2.5 py-2 flex items-center justify-between">
                           <div className="min-w-0">
@@ -542,6 +551,26 @@ export function DashboardPage() {
                 </button>
               ))}
             </div>
+            <span className="text-[11px] text-text-tertiary">·</span>
+            <div className="flex items-center gap-1">
+              {([
+                { key: 'all' as const, label: '全部状态' },
+                { key: 'evaluated' as const, label: '已评测' },
+                { key: 'unevaluated' as const, label: '未评测' },
+              ]).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setUserEvalStatus(key)}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all duration-200 ${
+                    userEvalStatus === key
+                      ? 'bg-black/[0.06] text-text-primary'
+                      : 'text-text-tertiary hover:bg-black/[0.04] hover:text-text-secondary'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {userRecords.length === 0 ? (
@@ -568,6 +597,7 @@ export function DashboardPage() {
                   key={record.id}
                   record={record}
                   isExample={false}
+                  modelUrl={record.thumbnailUrl || undefined}
                   onClick={() => handleCardClick(record)}
                 />
               ))}

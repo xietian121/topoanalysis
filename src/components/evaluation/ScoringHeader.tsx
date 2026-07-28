@@ -11,6 +11,7 @@ import { useToastStore } from '@/stores/toastStore'
 import { getStandardByType } from '@/data/evaluation-standards'
 import { generateSuggestions } from '@/lib/suggestion-engine'
 import { MODEL_TYPE_LABELS } from '@/types/evaluation'
+import { generateModelThumbnail } from '@/components/viewer/ModelCardThumbnail'
 
 export function ScoringHeader() {
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ export function ScoringHeader() {
 
   const currentModel = useModelStore((s) => s.currentModel)
   const modelText = useModelStore((s) => s.modelText)
+  const modelObject = useModelStore((s) => s.modelObject)
   const autoReport = useEvalStore((s) => s.autoReport)
   const evaluationType = useEvalStore((s) => s.evaluationType)
   const symmetryEnabled = useEvalStore((s) => s.symmetryEnabled)
@@ -118,6 +120,12 @@ export function ScoringHeader() {
         modelInfoSnapshot: currentModel,
       }
 
+      // 生成缩略图
+      if (modelObject) {
+        try { record.thumbnailUrl = await generateModelThumbnail(modelObject) }
+        catch { record.thumbnailUrl = '' }
+      }
+
       addRecord(record)
       finishFlow()
       setHighlight(null)
@@ -136,7 +144,7 @@ export function ScoringHeader() {
     }
   }, [
     currentModel, autoReport, evaluationType, symmetryEnabled, allScored, allCriteria, flowScores,
-    setFlowResult, addRecord, finishFlow, navigate, setHighlight, modelText, addToast,
+    setFlowResult, addRecord, finishFlow, navigate, setHighlight, modelText, modelObject, addToast,
   ])
 
   const handleForceSubmit = useCallback(() => {

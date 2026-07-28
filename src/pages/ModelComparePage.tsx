@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useEvalHistoryStore, type EvalHistoryRecord } from '@/stores/evalHistoryStore'
+import { useComparePoolStore } from '@/stores/comparePoolStore'
 import { getExampleRecords } from '@/data/example-models'
 import { MODEL_TYPE_LABELS } from '@/types/evaluation'
 
@@ -249,11 +250,19 @@ function CompareAnalysis({ modelA, modelB }: { modelA: EvalHistoryRecord; modelB
 
 export function ModelComparePage() {
   const navigate = useNavigate()
+  const setActiveCompare = useComparePoolStore((s) => s.setActiveCompare)
   const [modelA, setModelA] = useState<EvalHistoryRecord | null>(null)
   const [modelB, setModelB] = useState<EvalHistoryRecord | null>(null)
   const [pickerTarget, setPickerTarget] = useState<'A' | 'B' | null>(null)
 
   const bothSelected = modelA && modelB
+  const isEvaluated = (r: EvalHistoryRecord | null): boolean => {
+    if (!r) return false
+    return r.evalStatus === 'completed' && r.total > 0
+  }
+  const aOk = isEvaluated(modelA)
+  const bOk = isEvaluated(modelB)
+  const bothEvaluated = aOk && bOk
   const handleSwap = () => {
     setModelA(modelB)
     setModelB(modelA)
@@ -369,9 +378,9 @@ export function ModelComparePage() {
           </div>
         </div>
 
-        {/* Swap button */}
+        {/* Swap + Start Compare */}
         {bothSelected && (
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-4">
             <button
               onClick={handleSwap}
               className="flex items-center gap-1.5 text-[12px] text-text-tertiary hover:text-text-secondary transition-colors"
@@ -379,6 +388,29 @@ export function ModelComparePage() {
               <Minus className="h-3 w-3 rotate-90" />
               交换对比位置
             </button>
+
+            {/* Validation check */}
+            {!bothEvaluated && (
+              <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-center max-w-md">
+                <p className="text-[13px] font-medium text-red-700 mb-1">暂无法开始对比</p>
+                <div className="text-[12px] text-red-600 space-y-0.5">
+                  {!aOk && <p>模型A「{modelA?.modelName.replace(/\s*\(OBJ\).*/, '') ?? ''}」暂未完成评测</p>}
+                  {!bOk && <p>模型B「{modelB?.modelName.replace(/\s*\(OBJ\).*/, '') ?? ''}」暂未完成评测</p>}
+                </div>
+                <p className="text-[11px] text-red-500/70 mt-1">请先完成模型评测后再进行对比</p>
+              </div>
+            )}
+
+            {/* Start compare button */}
+            {bothEvaluated && (
+              <button
+                onClick={() => setActiveCompare(modelA!.id, modelB!.id)}
+                className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-[14px] font-semibold text-white shadow-md hover:bg-accent/90 transition-all active:scale-[0.98]"
+              >
+                <Swords className="h-4 w-4" />
+                开始对比
+              </button>
+            )}
           </div>
         )}
 

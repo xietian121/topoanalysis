@@ -11,6 +11,7 @@ import { ReportPage } from '@/pages/ReportPage'
 import { CompareReportPage } from '@/pages/CompareReportPage'
 import { TutorialPage } from '@/pages/TutorialPage'
 import { ModelComparePage } from '@/pages/ModelComparePage'
+import { ModelCompare3DPage } from '@/pages/ModelCompare3DPage'
 import { AnalyticsPage } from '@/pages/AnalyticsPage'
 
 export const router = createBrowserRouter([
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
       // Phase 2: Report, Compare, Analytics
       { path: 'report/:id', element: <ReportPage /> },
       { path: 'compare/report/:id1/:id2', element: <CompareReportPage /> },
+      { path: 'compare/3d/:id1/:id2', element: <ModelCompare3DPage /> },
       { path: 'compare', element: <ModelComparePage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
 

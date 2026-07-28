@@ -319,7 +319,7 @@ export function TutorialPage() {
                 {/* Score gap */}
                 <div className="flex items-center justify-center gap-1">
                   <span className="text-[10px] text-text-tertiary">分差</span>
-                  <span className={`mono text-[13px] font-semibold ${excTotal > probTotal ? 'text-emerald-500' : 'text-red-500'}`}>
+                  <span className={`mono text-[13px] font-semibold ${excTotal > probTotal ? 'text-blue-500' : excTotal < probTotal ? 'text-blue-500' : 'text-text-tertiary'}`}>
                     {(excTotal - probTotal).toFixed(1)}
                   </span>
                 </div>
@@ -349,13 +349,13 @@ export function TutorialPage() {
                           {/* Mini score bars */}
                           <div className="flex items-center gap-1 ml-auto">
                             <div className="w-12 h-1.5 rounded-full bg-black/[0.06] overflow-hidden flex justify-end">
-                              <div className="h-full rounded-full bg-red-300/70" style={{ width: `${probPct * 100}%` }} />
+                              <div className="h-full rounded-full bg-blue-300/70" style={{ width: `${probPct * 100}%` }} />
                             </div>
-                            <span className="mono text-[10px] text-red-400 w-6 text-right shrink-0">{probScore?.score.toFixed(1) ?? '0'}</span>
+                            <span className="mono text-[10px] text-blue-400 w-6 text-right shrink-0">{probScore?.score.toFixed(1) ?? '0'}</span>
                             <span className="text-[9px] text-text-tertiary">│</span>
-                            <span className="mono text-[10px] text-emerald-400 w-6 text-left shrink-0">{excScore?.score.toFixed(1) ?? '0'}</span>
+                            <span className="mono text-[10px] text-blue-500 w-6 text-left shrink-0">{excScore?.score.toFixed(1) ?? '0'}</span>
                             <div className="w-12 h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
-                              <div className="h-full rounded-full bg-emerald-300/70" style={{ width: `${excPct * 100}%` }} />
+                              <div className="h-full rounded-full bg-blue-400/70" style={{ width: `${excPct * 100}%` }} />
                             </div>
                           </div>
                         </div>
@@ -390,20 +390,20 @@ export function TutorialPage() {
                                   <div className="flex items-center gap-1">
                                     <div className="flex-1 h-1 rounded-full bg-black/[0.05] overflow-hidden flex justify-end">
                                       <div
-                                        className={`h-full rounded-full transition-all duration-300 ${isActive ? 'bg-red-400' : 'bg-red-300/60'}`}
+                                        className={`h-full rounded-full transition-all duration-300 ${isActive ? 'bg-blue-400' : 'bg-blue-300/60'}`}
                                         style={{ width: `${pPct * 100}%` }}
                                       />
                                     </div>
-                                    <span className={`mono text-[11px] font-semibold w-5 text-right shrink-0 ${isActive ? 'text-red-500' : 'text-red-400'}`}>
+                                    <span className={`mono text-[11px] font-semibold w-5 text-right shrink-0 ${isActive ? 'text-blue-500' : 'text-blue-400'}`}>
                                       {pRaw}
                                     </span>
                                     <span className="text-[9px] text-text-tertiary shrink-0">│</span>
-                                    <span className={`mono text-[11px] font-semibold w-5 text-left shrink-0 ${isActive ? 'text-emerald-500' : 'text-emerald-400'}`}>
+                                    <span className={`mono text-[11px] font-semibold w-5 text-left shrink-0 ${isActive ? 'text-blue-600' : 'text-blue-500'}`}>
                                       {eRaw}
                                     </span>
                                     <div className="flex-1 h-1 rounded-full bg-black/[0.05] overflow-hidden">
                                       <div
-                                        className={`h-full rounded-full transition-all duration-300 ${isActive ? 'bg-emerald-400' : 'bg-emerald-300/60'}`}
+                                        className={`h-full rounded-full transition-all duration-300 ${isActive ? 'bg-blue-500' : 'bg-blue-400/60'}`}
                                         style={{ width: `${ePct * 100}%` }}
                                       />
                                     </div>

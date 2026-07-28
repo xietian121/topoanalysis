@@ -6,6 +6,8 @@ interface ComparePoolStore {
   pool: EvalHistoryRecord[]
   /** 是否正在进行对比选择 */
   isSelecting: boolean
+  /** 当前活跃的 3D 对比模型 ID（切换标签后自动恢复） */
+  activeCompareIds: { id1: string; id2: string } | null
 
   addToPool: (record: EvalHistoryRecord) => boolean
   removeFromPool: (id: string) => void
@@ -15,11 +17,16 @@ interface ComparePoolStore {
   /** 开始对比选择模式 */
   startSelecting: () => void
   stopSelecting: () => void
+  /** 设置活跃对比 */
+  setActiveCompare: (id1: string, id2: string) => void
+  /** 清除活跃对比 */
+  clearActiveCompare: () => void
 }
 
 export const useComparePoolStore = create<ComparePoolStore>()((set, get) => ({
   pool: [],
   isSelecting: false,
+  activeCompareIds: null,
 
   addToPool: (record) => {
     const { pool } = get()
@@ -39,4 +46,7 @@ export const useComparePoolStore = create<ComparePoolStore>()((set, get) => ({
 
   startSelecting: () => set({ isSelecting: true }),
   stopSelecting: () => set({ isSelecting: false }),
+
+  setActiveCompare: (id1, id2) => set({ activeCompareIds: { id1, id2 } }),
+  clearActiveCompare: () => set({ activeCompareIds: null }),
 }))

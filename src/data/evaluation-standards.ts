@@ -564,7 +564,7 @@ const SYMMETRY_CRITERION_BASE = {
 }
 
 /** 各标准在启用对称性后的维度权重与准则满分 */
-const SYMMETRY_CONFIG: Record<EvaluationType, {
+export const SYMMETRY_CONFIG: Record<EvaluationType, {
   dimWeights: Record<string, number>
   critMax: Record<string, number>
   symmetryMax: number

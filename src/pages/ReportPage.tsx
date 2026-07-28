@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { CompareCanvas } from '@/components/viewer/CompareCanvas'
+import { ModelInfoOverlay } from '@/components/viewer/ModelInfoOverlay'
 import { ViewerToolbar } from '@/components/viewer/ViewerToolbar'
 import { useViewerStore } from '@/stores/viewerStore'
 import { useEvalHistoryStore } from '@/stores/evalHistoryStore'
@@ -116,6 +117,7 @@ export function ReportPage() {
   const modelObject = useModelStore((s) => s.modelObject)
   const currentModel = useModelStore((s) => s.currentModel)
   const referenceModel = useModelStore((s) => s.referenceModel)
+  const referenceModelInfo = useModelStore((s) => s.referenceModelInfo)
   const objFaceData = useModelStore((s) => s.objFaceData)
   const renderMode = useViewerStore((s) => s.settings.renderMode)
   const showGrid = useViewerStore((s) => s.settings.showGrid)
@@ -382,14 +384,22 @@ export function ReportPage() {
               </div>
             )}
             {modelReady && referenceModel && (
-              <CompareCanvas
-                model={referenceModel}
-                renderMode="solid"
-                showGrid={showGrid}
-                side="left"
-                forceSolid
-                highlightAutoReport={null}
-              />
+              <>
+                <ModelInfoOverlay
+                  model={referenceModel}
+                  modelInfo={referenceModelInfo}
+                  label="高模"
+                  labelDesc="参考模型"
+                />
+                <CompareCanvas
+                  model={referenceModel}
+                  renderMode="solid"
+                  showGrid={showGrid}
+                  side="left"
+                  forceSolid
+                  highlightAutoReport={null}
+                />
+              </>
             )}
             {modelReady && !referenceModel && !loadingModel && (
               <div className="absolute inset-0 flex items-center justify-center">
@@ -444,14 +454,23 @@ export function ReportPage() {
 
             {/* Low model canvas */}
             {modelReady && modelObject && (
-              <CompareCanvas
-                model={modelObject}
-                renderMode={renderMode}
-                showGrid={showGrid}
-                side="center"
-                objFaceData={objFaceData}
-                highlightAutoReport={effectiveAutoReport}
-              />
+              <>
+                <ModelInfoOverlay
+                  model={modelObject}
+                  modelInfo={currentModel}
+                  faceData={objFaceData}
+                  label="低模"
+                  labelDesc={currentModel?.name ?? "评测模型"}
+                />
+                <CompareCanvas
+                  model={modelObject}
+                  renderMode={renderMode}
+                  showGrid={showGrid}
+                  side="center"
+                  objFaceData={objFaceData}
+                  highlightAutoReport={effectiveAutoReport}
+                />
+              </>
             )}
           </div>
 

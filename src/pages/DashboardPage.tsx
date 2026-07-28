@@ -15,11 +15,12 @@ type FilterUsage = 'all' | 'game' | 'general'
 type FilterAnimation = 'all' | 'static' | 'dynamic'
 type FilterEvalStatus = 'all' | 'evaluated' | 'unevaluated'
 
-function ModelCard({ record, isExample, modelUrl, onClick }: {
+function ModelCard({ record, isExample, modelUrl, onClick, onDelete }: {
   record: EvalHistoryRecord
   isExample: boolean
   modelUrl?: string
   onClick: () => void
+  onDelete?: () => void
 }) {
   const ratio = record.maxTotal > 0 ? record.total / record.maxTotal : 0
   const gradeColor = ratio < 0.4 ? 'bg-red-500' : ratio < 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
@@ -81,6 +82,18 @@ function ModelCard({ record, isExample, modelUrl, onClick }: {
           }`}>
             {isDynamic ? '可动' : '静态'}
           </span>
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-black/10 text-text-tertiary hover:bg-red-100 hover:text-red-500 transition-colors"
+              title="删除此模型"
+            >
+              <span className="text-[10px] font-bold leading-none">✕</span>
+            </button>
+          )}
         </div>
 
         {/* 质量评级角标 */}
@@ -603,6 +616,11 @@ export function DashboardPage() {
                   isExample={false}
                   modelUrl={record.thumbnailUrl || undefined}
                   onClick={() => handleCardClick(record)}
+                  onDelete={() => {
+                    if (confirm(`确定要删除「${record.modelName.replace(/\s*\(OBJ\).*/, '')}」吗？\n\n删除后无法恢复。`)) {
+                      useEvalHistoryStore.getState().removeRecord(record.id)
+                    }
+                  }}
                 />
               ))}
             </div>

@@ -104,7 +104,7 @@ export const useEvalHistoryStore = create<EvalHistoryStore>()(
       getExampleRecords: () => get().records.filter((r) => r.isExample),
     }),
     {
-      name: 'topoeval-history',
+      name: 'topo-analysis-history',
       version: 3,
       // Strip large geometry data before persisting to avoid localStorage quota
       partialize: (state) => ({

@@ -302,7 +302,7 @@ export function StandardsPage() {
             {/* 页面头部 */}
             <div className="mb-8">
               <h1 className="text-[32px] font-bold tracking-[-0.02em] text-text-primary">
-                TopoEval 3D拓扑质量评测标准
+                TopoAnalysis 3D模型拓扑结构分析标准
               </h1>
               <p className="mt-2 text-[15px] text-text-secondary">
                 统一、可量化、可对比的低模拓扑评估体系
@@ -751,7 +751,7 @@ export function StandardsPage() {
           {/* Footer */}
           <div className="text-center pb-12">
             <p className="text-[12px] text-text-tertiary">
-              TopoEval · AI 3D 拓扑质量评测标准 v2.0 · 最后更新 2026-07-28
+              TopoAnalysis · AI 3D 模型拓扑结构分析标准 v2.0 · 最后更新 2026-07-28
             </p>
           </div>
 

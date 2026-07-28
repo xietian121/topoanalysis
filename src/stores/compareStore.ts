@@ -106,10 +106,10 @@ export const useCompareStore = create<CompareStore>()((set, get) => ({
           error: null,
         },
       }))
-      console.log(`[TopoEval] ✅ 高模加载完成: ${file.name}`)
+      console.log(`[TopoAnalysis] ✅ 高模加载完成: ${file.name}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : '模型加载失败'
-      console.error(`[TopoEval] ❌ 高模加载失败:`, err)
+      console.error(`[TopoAnalysis] ❌ 高模加载失败:`, err)
       set((s) => ({
         highModel: { ...s.highModel, isLoading: false, error: message },
       }))
@@ -147,7 +147,7 @@ export const useCompareStore = create<CompareStore>()((set, get) => ({
         faceData = extractOBJFaceData(text)
         const allFaces = faceData.groups.flat()
         console.log(
-          `[TopoEval] 低模 OBJ 原始面: ${allFaces.length} 个 (${allFaces.filter((f) => f.length === 3).length}三角, ${allFaces.filter((f) => f.length === 4).length}四边)`,
+          `[TopoAnalysis] 低模 OBJ 原始面: ${allFaces.length} 个 (${allFaces.filter((f) => f.length === 3).length}三角, ${allFaces.filter((f) => f.length === 4).length}四边)`,
         )
       } else if (ext === 'fbx') {
         group = await parseFBXFile(file)
@@ -173,10 +173,10 @@ export const useCompareStore = create<CompareStore>()((set, get) => ({
           error: null,
         },
       }))
-      console.log(`[TopoEval] ✅ 低模加载完成: ${file.name}`)
+      console.log(`[TopoAnalysis] ✅ 低模加载完成: ${file.name}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : '模型加载失败'
-      console.error(`[TopoEval] ❌ 低模加载失败:`, err)
+      console.error(`[TopoAnalysis] ❌ 低模加载失败:`, err)
       set((s) => ({
         lowModel: { ...s.lowModel, isLoading: false, error: message },
       }))

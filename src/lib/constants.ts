@@ -1,8 +1,8 @@
 import { LayoutDashboard, Upload, ClipboardCheck, Swords, BarChart4 } from 'lucide-react'
 import type { NavItem } from '@/types/viewer'
 
-export const APP_NAME = 'TopoEval'
-export const APP_TITLE = 'AI 3D 拓扑质量评测'
+export const APP_NAME = 'TopoAnalysis'
+export const APP_TITLE = 'AI 3D 模型拓扑结构分析'
 export const APP_DESCRIPTION = '自动检测 + 专业评估，让拓扑质量可量化、可对比、可改进'
 
 export const NAV_ITEMS: NavItem[] = [

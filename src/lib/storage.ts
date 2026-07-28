@@ -1,7 +1,7 @@
 import { openDB, type IDBPDatabase } from 'idb'
 
 // ===== localStorage helpers =====
-const KEY_PREFIX = 'topo-eval-'
+const KEY_PREFIX = 'topo-analysis-'
 
 export const STORAGE_KEYS = {
   VIEWER_SETTINGS: `${KEY_PREFIX}viewer-settings`,
@@ -40,7 +40,7 @@ let dbPromise: Promise<IDBPDatabase> | null = null
 
 function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
-    dbPromise = openDB('topo-eval-results', 1, {
+    dbPromise = openDB('topo-analysis-results', 1, {
       upgrade(db) {
         if (!db.objectStoreNames.contains('evaluations')) {
           const store = db.createObjectStore('evaluations', { keyPath: 'id' })

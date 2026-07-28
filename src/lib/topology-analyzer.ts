@@ -881,7 +881,7 @@ export function analyzeTopology(
   })
 
   console.log(
-    `[TopoEval] 拓扑分析: ${faceStats.totalFaces}面 ` +
+    `[TopoAnalysis] 拓扑分析: ${faceStats.totalFaces}面 ` +
     `(Q:${faceStats.quadCount} T:${faceStats.triCount} N:${faceStats.ngonCount}) ` +
     `非流形:${nonManifold.count} 重叠:${overlapping.count} 边界边:${boundary.count} ` +
     `极点(≥6边):${poleStats.count} ` +

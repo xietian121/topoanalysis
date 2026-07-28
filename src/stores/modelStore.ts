@@ -60,7 +60,7 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
     const signal = options?.signal
 
     set({ isLoading: true, error: null })
-    console.log(`[TopoEval] 开始加载模型: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`)
+    console.log(`[TopoAnalysis] 开始加载模型: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`)
 
     try {
       const { parseOBJFile, extractModelStats, extractOBJFaceData } =
@@ -68,7 +68,7 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
       const { analyzeTopology } = await import('@/lib/topology-analyzer')
 
       const ext = file.name.split('.').pop()?.toLowerCase()
-      console.log(`[TopoEval] 文件格式: .${ext}`)
+      console.log(`[TopoAnalysis] 文件格式: .${ext}`)
 
       // 低模仅支持 OBJ — FBX 无法进行拓扑分析（extractOBJFaceData）
       if (ext !== 'obj') {
@@ -98,7 +98,7 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
       const quads = allFaces.filter((f) => f.length === 4).length
       const tris = allFaces.filter((f) => f.length === 3).length
       console.log(
-        `[TopoEval] OBJ 原始面: ${allFaces.length} 个 (${tris}三角, ${quads}四边) in ${objFaceData.groups.length} 组`,
+        `[TopoAnalysis] OBJ 原始面: ${allFaces.length} 个 (${tris}三角, ${quads}四边) in ${objFaceData.groups.length} 组`,
       )
       onProgress?.(60, 'parse', '正在解析模型数据...')
 
@@ -118,11 +118,11 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
       group.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) meshCount++
       })
-      console.log(`[TopoEval] 解析完成，找到 ${meshCount} 个子网格`)
+      console.log(`[TopoAnalysis] 解析完成，找到 ${meshCount} 个子网格`)
 
       const stats = extractModelStats(group)
       console.log(
-        `[TopoEval] 统计: ${stats.vertexCount} 顶点, ${stats.faceCount} 三角面`,
+        `[TopoAnalysis] 统计: ${stats.vertexCount} 顶点, ${stats.faceCount} 三角面`,
       )
 
       // Init scene: 90-100%
@@ -151,15 +151,15 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
         error: null,
         modelText,
       })
-      console.log('[TopoEval] ✅ 模型加载完成')
+      console.log('[TopoAnalysis] ✅ 模型加载完成')
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        console.log('[TopoEval] ⏹ 加载已取消')
+        console.log('[TopoAnalysis] ⏹ 加载已取消')
         set({ isLoading: false })
         return
       }
       const message = err instanceof Error ? err.message : '模型加载失败'
-      console.error(`[TopoEval] ❌ 加载失败:`, err)
+      console.error(`[TopoAnalysis] ❌ 加载失败:`, err)
       set({ isLoading: false, error: message })
       onProgress?.(0, null as unknown as string, '')
     }
@@ -173,7 +173,7 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
     const signal = options?.signal
 
     set({ isLoading: true, error: null })
-    console.log(`[TopoEval] 从 URL 加载模型: ${url}`)
+    console.log(`[TopoAnalysis] 从 URL 加载模型: ${url}`)
 
     try {
       const { parseOBJFile, extractModelStats, extractOBJFaceData } =
@@ -221,7 +221,7 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
       const objFaceData = extractOBJFaceData(text)
 
       const allFaces = objFaceData.groups.flat()
-      console.log(`[TopoEval] OBJ 原始面: ${allFaces.length} 个`)
+      console.log(`[TopoAnalysis] OBJ 原始面: ${allFaces.length} 个`)
       onProgress?.(60, 'parse', '正在解析模型数据...')
 
       // Analyze: 60-90%
@@ -260,15 +260,15 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
         error: null,
         modelText: text,
       })
-      console.log('[TopoEval] ✅ URL 模型加载完成')
+      console.log('[TopoAnalysis] ✅ URL 模型加载完成')
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        console.log('[TopoEval] ⏹ 加载已取消')
+        console.log('[TopoAnalysis] ⏹ 加载已取消')
         set({ isLoading: false })
         return
       }
       const message = err instanceof Error ? err.message : 'URL 模型加载失败'
-      console.error(`[TopoEval] ❌ URL 加载失败:`, err)
+      console.error(`[TopoAnalysis] ❌ URL 加载失败:`, err)
       set({ isLoading: false, error: message })
       onProgress?.(0, null as unknown as string, '')
     }
@@ -281,7 +281,7 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
     const onProgress = options?.onProgress
 
     set({ isLoading: true, error: null })
-    console.log(`[TopoEval] 从文本恢复模型: ${fileName}`)
+    console.log(`[TopoAnalysis] 从文本恢复模型: ${fileName}`)
 
     try {
       const { parseOBJFile, extractModelStats, extractOBJFaceData } =
@@ -324,10 +324,10 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
         error: null,
         modelText: text,
       })
-      console.log('[TopoEval] ✅ 模型恢复完成')
+      console.log('[TopoAnalysis] ✅ 模型恢复完成')
     } catch (err) {
       const message = err instanceof Error ? err.message : '模型恢复失败'
-      console.error(`[TopoEval] ❌ 模型恢复失败:`, err)
+      console.error(`[TopoAnalysis] ❌ 模型恢复失败:`, err)
       set({ isLoading: false, error: message })
       onProgress?.(0, null as unknown as string, '')
     }
@@ -338,7 +338,7 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
     clearReferenceModel()
 
     set({ isLoading: true, error: null })
-    console.log(`[TopoEval] 加载参考模型: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`)
+    console.log(`[TopoAnalysis] 加载参考模型: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`)
 
     try {
       const { parseOBJFile, parseFBXFile } =
@@ -368,10 +368,10 @@ export const useModelStore = create<ModelStore>()((set, get) => ({
         isLoading: false,
         error: null,
       })
-      console.log('[TopoEval] ✅ 参考模型加载完成')
+      console.log('[TopoAnalysis] ✅ 参考模型加载完成')
     } catch (err) {
       const message = err instanceof Error ? err.message : '参考模型加载失败'
-      console.error(`[TopoEval] ❌ 参考模型加载失败:`, err)
+      console.error(`[TopoAnalysis] ❌ 参考模型加载失败:`, err)
       set({ isLoading: false, error: message })
     }
   },

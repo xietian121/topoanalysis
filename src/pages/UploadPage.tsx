@@ -40,7 +40,7 @@ export function UploadPage() {
                 error={highModel.error}
                 onFilesAccepted={(files) => loadHighPolyModel(files[0])}
                 label="拖放高模文件到此处"
-                description="高精度原始模型（参考用）— 支持 OBJ / FBX"
+                description="高精度原始模型（参考用）— 支持 OBJ / FBX，最大 5GB，推荐 1GB 以内"
                 maxSizeMB={HIGH_POLY_MAX_FILE_SIZE_MB}
               />
               {highModel.info && !highModel.isLoading && (

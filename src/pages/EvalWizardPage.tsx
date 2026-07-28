@@ -331,6 +331,7 @@ export function EvalWizardPage() {
                   <p className="text-[12px] text-blue-700 leading-relaxed">
                     💡 <span className="font-semibold">强烈建议上传高模参考</span> — 高模是评判低模拓扑匹配度的核心参照。
                     上传后可对比分析低模布线是否精准还原了高模的结构轮廓，评测结论将更具参考价值。
+                    为兼顾加载速度与分析精度，<span className="font-semibold">推荐上传 1GB 以内</span>的高模文件。
                   </p>
                 </div>
                 {!highUploadDone ? (
@@ -339,7 +340,7 @@ export function EvalWizardPage() {
                     error={highError}
                     onFilesAccepted={handleHighFileAccepted}
                     label="拖放参考高模文件到此处"
-                    description="支持 OBJ / FBX — 最大 1024MB"
+                    description="支持 OBJ / FBX — 最大 5GB，推荐 1GB 以内"
                     maxSizeMB={HIGH_POLY_MAX_FILE_SIZE_MB}
                     acceptFormats={HIGH_POLY_MODEL_FORMATS}
                   />

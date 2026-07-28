@@ -17,4 +17,4 @@ export const ACCEPTED_MODEL_FORMATS = ['.obj', '.fbx']
 export const LOW_POLY_MODEL_FORMATS = ['.obj']
 export const HIGH_POLY_MODEL_FORMATS = ['.obj', '.fbx']
 export const MAX_FILE_SIZE_MB = 100
-export const HIGH_POLY_MAX_FILE_SIZE_MB = 1024
+export const HIGH_POLY_MAX_FILE_SIZE_MB = 5120

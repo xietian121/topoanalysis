@@ -270,7 +270,10 @@ export function FlowReviewCard({
               return (
                 <button
                   key={s}
-                  onClick={() => onSetScore(criterion.id, s)}
+                  onClick={() => {
+                    console.log('[FlowReviewCard] Score click:', { criterionId: criterion.id, score: s, optional, optionalEnabled, isOptionalDisabled })
+                    onSetScore(criterion.id, s)
+                  }}
                   className={`w-6 h-6 rounded-full text-[10px] font-semibold transition-all duration-150 flex items-center justify-center ${
                     active
                       ? 'bg-accent text-white shadow-sm scale-105'

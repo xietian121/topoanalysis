@@ -481,6 +481,7 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
                             optional={isOptional}
                             optionalEnabled={symmetryEnabled}
                             onToggleOptional={(v) => {
+                              console.log('[EvalPanel] onToggleOptional:', { v, isFlowActive, evaluationType })
                               if (isFlowActive) {
                                 // Update symmetry state and rebuild flow criteria
                                 // WITHOUT canceling the flow — scores preserved
@@ -499,6 +500,7 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
                                     optional: c.optional,
                                   })),
                                 )
+                                console.log('[EvalPanel] newCriteria after toggle:', newCriteria.map(c => ({ id: c.id, maxScore: c.maxScore, optional: c.optional })))
                                 // Update flow criteria in-place (scores survive)
                                 useEvalFlowStore.getState().updateCriteria(newCriteria)
                                 return

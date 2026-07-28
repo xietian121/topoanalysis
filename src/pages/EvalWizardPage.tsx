@@ -9,7 +9,7 @@ import { ModelDropZone } from '@/components/viewer/ModelDropZone'
 import { LOW_POLY_MODEL_FORMATS, HIGH_POLY_MODEL_FORMATS, HIGH_POLY_MAX_FILE_SIZE_MB } from '@/lib/constants'
 import { MODEL_USAGE_LABELS, MODEL_ANIMATION_LABELS, type ModelUsage, type ModelAnimation } from '@/types/evaluation'
 
-const STEPS = ['选择用途', '选择动效', '上传模型']
+const STEPS = ['选择用途', '选择模型类型', '上传模型']
 
 export function EvalWizardPage() {
   const navigate = useNavigate()

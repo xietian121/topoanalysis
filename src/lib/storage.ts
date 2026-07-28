@@ -35,7 +35,7 @@ export function removeItem(key: string): void {
   }
 }
 
-// ===== IndexedDB scaffold =====
+// ===== IndexedDB — eveluations =====
 let dbPromise: Promise<IDBPDatabase> | null = null
 
 function getDB(): Promise<IDBPDatabase> {
@@ -46,6 +46,9 @@ function getDB(): Promise<IDBPDatabase> {
           const store = db.createObjectStore('evaluations', { keyPath: 'id' })
           store.createIndex('byModelId', 'modelId')
           store.createIndex('byCreatedAt', 'createdAt')
+        }
+        if (!db.objectStoreNames.contains('modelFiles')) {
+          db.createObjectStore('modelFiles', { keyPath: 'id' })
         }
       },
     })
@@ -71,4 +74,37 @@ export async function getAllEvaluations(): Promise<Record<string, unknown>[]> {
 export async function deleteEvaluation(id: string): Promise<void> {
   const db = await getDB()
   await db.delete('evaluations', id)
+}
+
+// ===== IndexedDB — model file persistence =====
+
+/** 将 OBJ 模型文本持久化到 IndexedDB（localStorage 容量不足，仅存元数据） */
+export async function saveModelFile(id: string, text: string): Promise<void> {
+  try {
+    const db = await getDB()
+    await db.put('modelFiles', { id, text, savedAt: Date.now() })
+  } catch (e) {
+    console.warn(`Failed to save model file to IndexedDB: ${id}`, e)
+  }
+}
+
+/** 从 IndexedDB 读取 OBJ 模型文本 */
+export async function getModelFile(id: string): Promise<string | undefined> {
+  try {
+    const db = await getDB()
+    const entry = await db.get('modelFiles', id) as { id: string; text: string } | undefined
+    return entry?.text
+  } catch {
+    return undefined
+  }
+}
+
+/** 删除 IndexedDB 中的模型文件 */
+export async function deleteModelFile(id: string): Promise<void> {
+  try {
+    const db = await getDB()
+    await db.delete('modelFiles', id)
+  } catch {
+    // ignore
+  }
 }

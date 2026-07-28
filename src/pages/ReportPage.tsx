@@ -17,6 +17,7 @@ import { generateAIAnalysis } from '@/lib/ai-analysis'
 import type { AIAnalysisResult } from '@/lib/ai-analysis'
 import { generateSuggestions } from '@/lib/suggestion-engine'
 import { getExampleRecords, getExampleDefs } from '@/data/example-models'
+import { getModelFile } from '@/lib/storage'
 import { getStandardByType } from '@/data/evaluation-standards'
 import { RadarChart } from '@/components/evaluation/RadarChart'
 import { ScoreBadge } from '@/components/evaluation/ScoreBadge'
@@ -185,17 +186,24 @@ export function ReportPage() {
             }
           }
           finishLoading()
-        } else if (record.modelText) {
-          startLoading()
-          await loadModelFromText(record.modelText, record.modelName, record.modelFileSize, {
-            onProgress: (progress, stage, text) => {
-              setProgress(progress, stage as Parameters<typeof setProgress>[1], text)
-            },
-          })
-          finishLoading()
         } else {
-          setLoadError('模型数据不可用（无 URL 或文本内容）')
-          return
+          // 用户模型：优先内存中的 modelText，否则从 IndexedDB 读取
+          let text = record.modelText
+          if (!text) {
+            text = await getModelFile(record.id)
+          }
+          if (text) {
+            startLoading()
+            await loadModelFromText(text, record.modelName, record.modelFileSize, {
+              onProgress: (progress, stage, text) => {
+                setProgress(progress, stage as Parameters<typeof setProgress>[1], text)
+              },
+            })
+            finishLoading()
+          } else {
+            setLoadError('模型数据不可用（无 URL 或文本内容）')
+            return
+          }
         }
 
         setModelReady(true)
@@ -297,7 +305,22 @@ export function ReportPage() {
       return
     }
 
-    // Case 3: 无模型数据 → 提示
+    // Case 3: 用户模型 — 尝试从 IndexedDB 恢复
+    const text = record.modelText ?? await getModelFile(record.id)
+    if (text) {
+      try {
+        loadingStore.startLoading()
+        await modelStore.loadModelFromText(text, record.modelName, record.modelFileSize)
+        loadingStore.finishLoading()
+        navigate('/viewer/single')
+      } catch (err) {
+        console.error('重新打分加载模型失败:', err)
+        loadingStore.setError(err instanceof Error ? err.message : '模型加载失败，无法重新打分')
+      }
+      return
+    }
+
+    // Case 4: 无模型数据 → 提示
     alert('模型数据已过期，请通过首页"我的模型"重新上传后再评测。')
   }, [record, navigate])
 

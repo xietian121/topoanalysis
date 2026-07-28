@@ -12,6 +12,7 @@ import { getStandardByType } from '@/data/evaluation-standards'
 import { generateSuggestions } from '@/lib/suggestion-engine'
 import { MODEL_TYPE_LABELS } from '@/types/evaluation'
 import { generateModelThumbnail } from '@/components/viewer/ModelCardThumbnail'
+import { saveModelFile } from '@/lib/storage'
 
 export function ScoringHeader() {
   const navigate = useNavigate()
@@ -126,10 +127,11 @@ export function ScoringHeader() {
         catch { record.thumbnailUrl = '' }
       }
 
-      // 清除旧的用户记录，只保留本次新记录
-      useEvalHistoryStore.getState().clearAll()
-
       addRecord(record)
+      // 持久化模型文件到 IndexedDB（localStorage 容量不足）
+      if (modelText) {
+        saveModelFile(recordId, modelText).catch(() => {})
+      }
       finishFlow()
       setHighlight(null)
 

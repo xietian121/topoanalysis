@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { TopologyReport } from '@/lib/topology-analyzer'
 import type { RatingLevel } from './evalStore'
 import type { EvaluationType, EvaluationSuggestions } from '@/types/evaluation'
+import { deleteModelFile } from '@/lib/storage'
 import type { ModelInfo } from '@/types/model'
 import type { AIAnalysisResult } from '@/lib/ai-analysis'
 
@@ -83,12 +84,20 @@ export const useEvalHistoryStore = create<EvalHistoryStore>()(
           records: s.records.map((r) => (r.id === id ? { ...r, ...updates } : r)),
         })),
 
-      removeRecord: (id) =>
+      removeRecord: (id) => {
+        // 同步清理 IndexedDB 中的模型文件
+        deleteModelFile(id).catch(() => {})
         set((s) => ({
           records: s.records.filter((r) => r.id !== id),
-        })),
+        }))
+      },
 
-      clearAll: () => set({ records: [] }),
+      clearAll: () => {
+        // 清理所有非示例记录的 IndexedDB 文件
+        const ids = get().records.filter(r => !r.isExample).map(r => r.id)
+        ids.forEach(id => deleteModelFile(id).catch(() => {}))
+        set({ records: [] })
+      },
 
       getUserRecords: () => get().records.filter((r) => !r.isExample),
 

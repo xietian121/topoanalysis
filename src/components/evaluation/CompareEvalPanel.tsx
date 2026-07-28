@@ -283,10 +283,13 @@ export function CompareEvalPanel() {
               )}
             </h4>
             <div className="space-y-1">
-              {allCriteria.map((crit, idx) => {
+              {allCriteria.map((crit, _idx) => {
                 const score = isFlowActive ? (flowScores[crit.id] ?? 0) : 0
                 const isExpanded = expandedId === crit.id
-                const isCurrent = isFlowActive && idx === flowCurrentIndex
+                // Use flowCriteria index for navigation so it stays correct
+                // even if allCriteria and flowCriteria differ
+                const flowIdx = isFlowActive ? flowCriteria.findIndex(c => c.id === crit.id) : -1
+                const isCurrent = isFlowActive && flowIdx === flowCurrentIndex
                 const pct = (score / 10) * 100
                 const dimIdx = standard.dimensions.findIndex((d) =>
                   d.criteria.some((c) => c.id === crit.id),
@@ -304,7 +307,7 @@ export function CompareEvalPanel() {
                           setExpandedId(null)
                         } else {
                           setExpandedId(crit.id)
-                          if (isFlowActive && !isOptDisabled) flowGoTo(idx)
+                          if (isFlowActive && !isOptDisabled && flowIdx >= 0) flowGoTo(flowIdx)
                         }
                       }}
                       className={`w-full text-left rounded-lg px-3 py-2 transition-all duration-150 ${
@@ -353,16 +356,20 @@ export function CompareEvalPanel() {
                             criterion={crit}
                             currentScore={score}
                             onSetScore={flowSetScore}
-                            onPrev={() => flowGoTo(idx - 1)}
-                            onNext={() => flowGoTo(idx + 1)}
+                            onPrev={() => {
+                              if (flowIdx > 0) flowGoTo(flowIdx - 1)
+                            }}
+                            onNext={() => {
+                              if (flowIdx >= 0 && flowIdx < flowCriteria.length - 1) flowGoTo(flowIdx + 1)
+                            }}
                             onFinish={() => {
                               const { total } = computeFlowTotal(flowCriteria, flowScores)
                               setFlowResult({ ...flowScores }, total)
                               setHighlight(null)
                               flowFinish()
                             }}
-                            isFirst={idx === 0}
-                            isLast={idx === allCriteria.length - 1}
+                            isFirst={flowIdx === 0}
+                            isLast={flowIdx === flowCriteria.length - 1}
                             allScored={isAllScored(isFlowActive ? flowCriteria : allCriteria, flowScores)}
                             autoReport={autoReport}
                             scoredCount={Object.keys(flowScores).length}

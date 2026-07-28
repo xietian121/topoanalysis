@@ -53,6 +53,7 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
   const flowGoTo = useEvalFlowStore((s) => s.goTo)
   const flowSetScore = useEvalFlowStore((s) => s.setScore)
   const flowFinish = useEvalFlowStore((s) => s.finishFlow)
+  const cancelFlow = useEvalFlowStore((s) => s.cancelFlow)
   const setHighlight = useHighlightStore((s) => s.setCriterion)
   const setShowSymmetry = useViewerStore((s) => s.setShowSymmetry)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -110,6 +111,8 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
         maxScore: c.maxScore,
         method: c.method,
         dimensionName: dim.name,
+        scoringRule: c.scoringRule,
+        optional: c.optional,
       })),
     )
   }, [standard])
@@ -147,6 +150,7 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
         method: c.method,
         dimensionName: dim.name,
         scoringRule: c.scoringRule,
+        optional: c.optional,
       })),
     )
     startFlow(flattened)
@@ -382,16 +386,22 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
               )}
             </h4>
             <div className="space-y-1">
-              {allCriteria.map((crit, idx) => {
+              {allCriteria.map((crit, _idx) => {
                 const score = isFlowActive ? (flowScores[crit.id] ?? 0) : 0
                 const isExpanded = expandedId === crit.id
-                const isCurrent = isFlowActive && idx === flowCurrentIndex
+                // Use flowCriteria index for current detection, not allCriteria idx,
+                // so navigation stays correct even if criteria lists differ
+                const flowIdx = isFlowActive ? flowCriteria.findIndex(c => c.id === crit.id) : -1
+                const isCurrent = isFlowActive && flowIdx === flowCurrentIndex
                 const pct = (score / 10) * 100
                 const dimIdx = standard.dimensions.findIndex((d) =>
                   d.criteria.some((c) => c.id === crit.id),
                 )
                 const dimColor = ['#4a90d9', '#34c759', '#ff9500', '#af52de'][dimIdx] ?? '#4a90d9'
-                const canClick = isFlowActive
+                const isOptional = crit.optional === true
+                const isOptDisabled = isOptional && !symmetryEnabled
+                // Optional criteria (symmetry) are clickable even outside flow
+                const canClick = isFlowActive || isOptional
                 return (
                   <div key={crit.id}>
                     <button
@@ -401,39 +411,42 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
                           setExpandedId(null)
                         } else {
                           setExpandedId(crit.id)
-                          flowGoTo(idx)
+                          // Only navigate flow when criterion is active (not disabled optional)
+                          if (isFlowActive && !isOptDisabled && flowIdx >= 0) flowGoTo(flowIdx)
                         }
                       }}
                       className={`w-full text-left rounded-lg px-3 py-2 transition-all duration-150 ${
                         canClick
                           ? isCurrent
                             ? 'bg-accent/[0.08] border-l-[3px] border-accent pl-[9px] hover:bg-accent/[0.12]'
-                            : 'border-l-[3px] border-transparent pl-[9px] hover:bg-black/[0.04] cursor-pointer'
+                            : isOptDisabled
+                              ? 'border-l-[3px] border-transparent pl-[9px] hover:bg-black/[0.04] cursor-pointer opacity-60'
+                              : 'border-l-[3px] border-transparent pl-[9px] hover:bg-black/[0.04] cursor-pointer'
                           : 'border-l-[3px] border-transparent pl-[9px] cursor-default'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className={`text-[12px] font-medium truncate ${
-                          isCurrent ? 'text-accent' : 'text-text-primary'
+                          isCurrent ? 'text-accent' : isOptDisabled ? 'text-text-tertiary' : 'text-text-primary'
                         }`}>
                           {crit.name}
                         </span>
                         <span className={`mono text-[11px] ml-2 shrink-0 ${
                           score > 0 ? 'text-accent font-semibold' : 'text-text-tertiary'
                         }`}>
-                          {score}/10
+                          {isOptDisabled ? '—' : `${score}/10`}
                         </span>
                       </div>
                       {/* Slider bar */}
                       <div className="h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-300"
-                          style={{ width: `${pct}%`, backgroundColor: score > 0 ? dimColor : 'transparent' }}
+                          style={{ width: `${isOptDisabled ? 0 : pct}%`, backgroundColor: score > 0 ? dimColor : 'transparent' }}
                         />
                       </div>
                       {/* Dimension name + criterion weight */}
                       <p className="text-[10px] text-text-tertiary mt-1 truncate">
-                        {crit.dimensionName} · 满分 {crit.maxScore} 分
+                        {crit.dimensionName}{isOptional ? ' · 可选模块' : ` · 满分 ${crit.maxScore} 分`}
                       </p>
                     </button>
                     {/* Animated expand/collapse */}
@@ -448,20 +461,40 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
                             criterion={crit}
                             currentScore={score}
                             onSetScore={flowSetScore}
-                            onPrev={() => flowGoTo(idx - 1)}
-                            onNext={() => flowGoTo(idx + 1)}
+                            onPrev={() => {
+                              if (flowIdx > 0) flowGoTo(flowIdx - 1)
+                            }}
+                            onNext={() => {
+                              if (flowIdx >= 0 && flowIdx < flowCriteria.length - 1) flowGoTo(flowIdx + 1)
+                            }}
                             onFinish={() => {
                               const { total } = computeFlowTotal(flowCriteria, flowScores)
                               setFlowResult({ ...flowScores }, total)
                               setHighlight(null)
                               flowFinish()
                             }}
-                            isFirst={idx === 0}
-                            isLast={idx === allCriteria.length - 1}
+                            isFirst={flowIdx === 0}
+                            isLast={flowIdx === flowCriteria.length - 1}
                             allScored={isAllScored(isFlowActive ? flowCriteria : allCriteria, flowScores)}
                             autoReport={autoReport}
                             scoredCount={Object.keys(flowScores).length}
                             totalCount={isFlowActive ? flowCriteria.length : allCriteria.length}
+                            optional={isOptional}
+                            optionalEnabled={symmetryEnabled}
+                            onToggleOptional={(v) => {
+                              if (isFlowActive) {
+                                if (window.confirm('切换对称性评测状态将重置当前逐条审核进度，已填写的分数将丢失。确定继续吗？')) {
+                                  cancelFlow()
+                                  resetFlowResult()
+                                  setHighlight(null)
+                                  setSymmetryEnabled(v)
+                                  setShowSymmetry(v)
+                                }
+                                return
+                              }
+                              setSymmetryEnabled(v)
+                              setShowSymmetry(v)
+                            }}
                           />
                         </div>
                       </div>

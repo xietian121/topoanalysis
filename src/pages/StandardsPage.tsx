@@ -60,7 +60,6 @@ function TypeMatrixCard({ type, name, description, scenarios, highlights }: {
 }) {
   const isGame = type.startsWith('game-')
   const isDynamic = type.endsWith('-dynamic')
-  const borderColor = isGame ? 'border-l-blue-400' : 'border-l-purple-400'
   const bgHover = isGame ? 'hover:border-blue-300' : 'hover:border-purple-300'
 
   return (
@@ -453,7 +452,7 @@ export function StandardsPage() {
                       { dim: '绑定友好', id: 'joint-density', name: '关节区域面数倾斜', method: '人工', types: '仅可动模型', rowStyle: 'bg-purple-50/30' },
                       { dim: '绑定友好', id: 'joint-loop', name: '可动部位环形线', method: '人工', types: '仅可动模型', rowStyle: 'bg-purple-50/30' },
                       { dim: '（可选）', id: 'symmetry', name: '对称性', method: '人工', types: '手动启用', rowStyle: 'bg-gray-50/50 italic text-text-tertiary' },
-                    ].map((row, i) => (
+                    ].map((row) => (
                       <tr key={row.id} className={`border-b border-black/[0.03] hover:bg-black/[0.01] ${row.rowStyle}`}>
                         <td className="py-2.5 px-4 font-medium text-text-primary">{row.dim}</td>
                         <td className="py-2.5 px-3 mono text-[11px] text-text-secondary">{row.id}</td>

@@ -23,6 +23,8 @@ interface EvalFlowStore {
   startFlow: (criteria: FlattenedCriterion[]) => void
   goTo: (index: number) => void
   setScore: (criterionId: string, score: number) => void
+  /** Replace criteria in-place without resetting scores — used when toggling symmetry mid-flow */
+  updateCriteria: (criteria: FlattenedCriterion[]) => void
   finishFlow: () => void
   cancelFlow: () => void
 }
@@ -50,6 +52,8 @@ export const useEvalFlowStore = create<EvalFlowStore>()((set, get) => ({
     set((s) => ({
       reviewScores: { ...s.reviewScores, [criterionId]: roundScore(score) },
     })),
+
+  updateCriteria: (criteria) => set({ criteria }),
 
   finishFlow: () => set({ isActive: false }),
 

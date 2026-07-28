@@ -53,7 +53,6 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
   const flowGoTo = useEvalFlowStore((s) => s.goTo)
   const flowSetScore = useEvalFlowStore((s) => s.setScore)
   const flowFinish = useEvalFlowStore((s) => s.finishFlow)
-  const cancelFlow = useEvalFlowStore((s) => s.cancelFlow)
   const setHighlight = useHighlightStore((s) => s.setCriterion)
   const setShowSymmetry = useViewerStore((s) => s.setShowSymmetry)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -483,13 +482,25 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
                             optionalEnabled={symmetryEnabled}
                             onToggleOptional={(v) => {
                               if (isFlowActive) {
-                                if (window.confirm('切换对称性评测状态将重置当前逐条审核进度，已填写的分数将丢失。确定继续吗？')) {
-                                  cancelFlow()
-                                  resetFlowResult()
-                                  setHighlight(null)
-                                  setSymmetryEnabled(v)
-                                  setShowSymmetry(v)
-                                }
+                                // Update symmetry state and rebuild flow criteria
+                                // WITHOUT canceling the flow — scores preserved
+                                setSymmetryEnabled(v)
+                                setShowSymmetry(v)
+                                const newStandard = getStandardByType(evaluationType, v)
+                                const newCriteria = newStandard.dimensions.flatMap((dim) =>
+                                  dim.criteria.map((c) => ({
+                                    id: c.id,
+                                    name: c.name,
+                                    description: c.description,
+                                    maxScore: c.maxScore,
+                                    method: c.method,
+                                    dimensionName: dim.name,
+                                    scoringRule: c.scoringRule,
+                                    optional: c.optional,
+                                  })),
+                                )
+                                // Update flow criteria in-place (scores survive)
+                                useEvalFlowStore.getState().updateCriteria(newCriteria)
                                 return
                               }
                               setSymmetryEnabled(v)

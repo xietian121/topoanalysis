@@ -57,6 +57,7 @@ interface SymmetryGuideProps {
  */
 export function SymmetryGuide({ model, groundY }: SymmetryGuideProps) {
   const showSymmetry = useViewerStore((s) => s.settings.showSymmetry)
+  const symmetryAxis = useViewerStore((s) => s.settings.symmetryAxis)
 
   // ── 归一化变换（与 LoadedModel 一致） ──
   const normalization = useMemo(() => {
@@ -75,13 +76,22 @@ export function SymmetryGuide({ model, groundY }: SymmetryGuideProps) {
 
   if (!showSymmetry || !model || !normalization) return null
 
+  // 根据轴向确定平面旋转
+  // X轴(左右): YZ平面, rotation=[0, PI/2, 0]
+  // Y轴(上下): XZ平面, rotation=[-PI/2, 0, 0]
+  // Z轴(前后): XY平面, rotation=[0, 0, 0]
+  const axisRotation: [number, number, number] =
+    symmetryAxis === 'y' ? [-Math.PI / 2, 0, 0] :
+    symmetryAxis === 'z' ? [0, 0, 0] :
+    [0, Math.PI / 2, 0]
+
   return (
     <group scale={normalization.scale}>
       <group position={normalization.position}>
-        {/* YZ 对称参考面 — 80% 透明绿色 */}
+        {/* 对称参考面 — 80% 透明绿色 */}
         <mesh
           position={[0, 0, 0]}
-          rotation={[0, Math.PI / 2, 0]}
+          rotation={axisRotation}
           renderOrder={1}
         >
           <planeGeometry args={[planeSize, planeSize]} />

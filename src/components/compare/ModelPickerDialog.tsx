@@ -9,10 +9,10 @@ import { ModelCard } from './ModelCard'
 
 const FILTER_CHIPS: { key: EvaluationType | 'all'; label: string }[] = [
   { key: 'all', label: '全部' },
-  { key: 'game-dynamic', label: '游戏可动' },
-  { key: 'game-static', label: '游戏静态' },
-  { key: 'general-dynamic', label: '通用可动' },
-  { key: 'general-static', label: '通用静态' },
+  { key: 'game-dynamic', label: '实时渲染·可动' },
+  { key: 'game-static', label: '实时渲染·静态' },
+  { key: 'general-dynamic', label: '离线渲染·可动' },
+  { key: 'general-static', label: '离线渲染·静态' },
 ]
 
 type SortBy = 'score-desc' | 'score-asc' | 'date-desc'

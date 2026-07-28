@@ -11,7 +11,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
   'game-static': {
     id: 'game-static-standard',
     evaluationType: 'game-static',
-    name: '游戏·静态模型评测标准',
+    name: '实时渲染·静态模型评测标准',
     totalScore: 100,
     dimensions: [
       {
@@ -134,7 +134,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
   'game-dynamic': {
     id: 'game-dynamic-standard',
     evaluationType: 'game-dynamic',
-    name: '游戏·可动模型评测标准',
+    name: '实时渲染·可动模型评测标准',
     totalScore: 100,
     dimensions: [
       {
@@ -280,7 +280,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
   'general-static': {
     id: 'general-static-standard',
     evaluationType: 'general-static',
-    name: '通用·静态模型评测标准',
+    name: '离线渲染·静态模型评测标准',
     totalScore: 100,
     dimensions: [
       {
@@ -403,7 +403,7 @@ export const EVALUATION_STANDARDS: Record<EvaluationType, EvaluationStandard> = 
   'general-dynamic': {
     id: 'general-dynamic-standard',
     evaluationType: 'general-dynamic',
-    name: '通用·可动模型评测标准',
+    name: '离线渲染·可动模型评测标准',
     totalScore: 100,
     dimensions: [
       {
@@ -662,13 +662,13 @@ export const STATIC_MODEL_STANDARD = EVALUATION_STANDARDS['game-static']
 /** @deprecated 使用 GAME_DYNAMIC_STANDARD 替代 */
 export const DYNAMIC_MODEL_STANDARD = EVALUATION_STANDARDS['game-dynamic']
 
-/** 游戏·静态模型评测标准 */
+/** 实时渲染·静态模型评测标准 */
 export const GAME_STATIC_STANDARD = EVALUATION_STANDARDS['game-static']
-/** 游戏·可动模型评测标准 */
+/** 实时渲染·可动模型评测标准 */
 export const GAME_DYNAMIC_STANDARD = EVALUATION_STANDARDS['game-dynamic']
-/** 通用·静态模型评测标准 */
+/** 离线渲染·静态模型评测标准 */
 export const GENERAL_STATIC_STANDARD = EVALUATION_STANDARDS['general-static']
-/** 通用·可动模型评测标准 */
+/** 离线渲染·可动模型评测标准 */
 export const GENERAL_DYNAMIC_STANDARD = EVALUATION_STANDARDS['general-dynamic']
 
 // ============================================================================
@@ -688,37 +688,37 @@ export interface StandardMeta {
 export const STANDARDS_META: StandardMeta[] = [
   {
     type: 'game-static',
-    name: '游戏·静态模型',
-    usage: '游戏资产',
+    name: '实时渲染·静态模型',
+    usage: '实时渲染资产',
     animation: '静态',
-    description: '用于游戏引擎的静态场景、道具、建筑等不参与骨骼动画的模型。对面错误容忍度极低，线框效率要求高。',
+    description: '用于实时渲染引擎的静态场景、道具、建筑等不参与骨骼动画的模型。对面错误容忍度极低，线框效率要求高。',
     dimensionCount: 3,
     criterionCount: 11,
   },
   {
     type: 'game-dynamic',
-    name: '游戏·可动模型',
-    usage: '游戏资产',
+    name: '实时渲染·可动模型',
+    usage: '实时渲染资产',
     animation: '可动',
-    description: '用于游戏引擎的角色、生物等需要骨骼动画的模型。对关节布线、变形区域面数有严格要求。',
+    description: '用于实时渲染引擎的角色、生物等需要骨骼动画的模型。对关节布线、变形区域面数有严格要求。',
     dimensionCount: 4,
     criterionCount: 11,
   },
   {
     type: 'general-static',
-    name: '通用·静态模型',
-    usage: '通用3D资产',
+    name: '离线渲染·静态模型',
+    usage: '离线渲染资产',
     animation: '静态',
-    description: '用于影视、动画、3D打印、展示等非游戏场景的静态模型。标准相对宽松，更注重造型和布线流畅度。',
+    description: '用于影视、动画、3D打印、展示等非实时渲染场景的静态模型。标准相对宽松，更注重造型和布线流畅度。',
     dimensionCount: 3,
     criterionCount: 11,
   },
   {
     type: 'general-dynamic',
-    name: '通用·可动模型',
-    usage: '通用3D资产',
+    name: '离线渲染·可动模型',
+    usage: '离线渲染资产',
     animation: '可动',
-    description: '用于影视动画、VFX 等非游戏场景的可动模型。兼顾造型自由度和绑定动画需求。',
+    description: '用于影视动画、VFX 等非实时渲染场景的可动模型。兼顾造型自由度和绑定动画需求。',
     dimensionCount: 4,
     criterionCount: 11,
   },

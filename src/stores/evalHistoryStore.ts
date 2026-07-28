@@ -150,8 +150,7 @@ export const useEvalHistoryStore = create<EvalHistoryStore>()(
           state.records = state.records.filter((r) => {
             if (r.isExample) return true                       // 示例模型永远保留
             if (r.evalStatus !== 'completed') return false     // 未完成的清除
-            if (r.modelUrl || r.modelText) return true         // 有模型数据的保留
-            return false                                       // 无模型数据的孤儿清除
+            return true                                        // 已完成用户记录保留（modelText 可能在持久化时被 strip）
           })
         }
       },

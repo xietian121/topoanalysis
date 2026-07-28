@@ -85,26 +85,26 @@ function makePlaceholderDimensions(type: EvaluationType): TutorialDimensionConte
 export const TUTORIAL_CONTENT: TutorialTypeContent[] = [
   {
     type: 'game-static',
-    title: '游戏静态模型拓扑对比教学',
-    description: '对比游戏静态模型中的优秀案例与问题案例，理解低面数场景道具的拓扑标准。',
+    title: '实时渲染静态模型拓扑对比教学',
+    description: '对比实时渲染静态模型中的优秀案例与问题案例，理解低面数场景道具的拓扑标准。',
     dimensions: makePlaceholderDimensions('game-static'),
   },
   {
     type: 'game-dynamic',
-    title: '游戏可动模型拓扑对比教学',
-    description: '对比游戏可动角色中的优秀案例与问题案例，深入理解关节布线和变形区域的拓扑要求。',
+    title: '实时渲染可动模型拓扑对比教学',
+    description: '对比实时渲染可动角色中的优秀案例与问题案例，深入理解关节布线和变形区域的拓扑要求。',
     dimensions: makePlaceholderDimensions('game-dynamic'),
   },
   {
     type: 'general-static',
-    title: '通用静态模型拓扑对比教学',
-    description: '对比通用静态模型中的优秀案例与问题案例，掌握高面数展示模型的布线规范。',
+    title: '离线渲染静态模型拓扑对比教学',
+    description: '对比离线渲染静态模型中的优秀案例与问题案例，掌握高面数展示模型的布线规范。',
     dimensions: makePlaceholderDimensions('general-static'),
   },
   {
     type: 'general-dynamic',
-    title: '通用可动模型拓扑对比教学',
-    description: '对比通用可动模型中的优秀案例与问题案例，学习影视级可动资产的拓扑标准。',
+    title: '离线渲染可动模型拓扑对比教学',
+    description: '对比离线渲染可动模型中的优秀案例与问题案例，学习影视级可动资产的拓扑标准。',
     dimensions: makePlaceholderDimensions('general-dynamic'),
   },
 ]

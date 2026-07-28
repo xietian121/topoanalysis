@@ -117,8 +117,8 @@ export function AnalyticsPage() {
     }
 
     const categoryComparison = [
-      { label: '游戏模型', dimensions: getCategoryDims(gameRecords), count: gameRecords.length },
-      { label: '通用模型', dimensions: getCategoryDims(generalRecords), count: generalRecords.length },
+      { label: '实时渲染用模型', dimensions: getCategoryDims(gameRecords), count: gameRecords.length },
+      { label: '离线渲染用模型', dimensions: getCategoryDims(generalRecords), count: generalRecords.length },
     ]
 
     // Top issue

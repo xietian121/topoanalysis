@@ -25,9 +25,26 @@ export function ViewerToolbar({ onClear, horizontal = false, showActions = true 
   const settings = useViewerStore((s) => s.settings)
   const setRenderMode = useViewerStore((s) => s.setRenderMode)
   const toggleGrid = useViewerStore((s) => s.toggleGrid)
-  const toggleSymmetry = useViewerStore((s) => s.toggleSymmetry)
+  const setShowSymmetry = useViewerStore((s) => s.setShowSymmetry)
+  const setSymmetryAxis = useViewerStore((s) => s.setSymmetryAxis)
   const resetCamera = useViewerStore((s) => s.resetCamera)
   const clearModel = useModelStore((s) => s.clearModel)
+  const cycleSymmetry = () => {
+    const s = useViewerStore.getState().settings
+    if (!s.showSymmetry) {
+      // 关闭 → X轴(左右)
+      setShowSymmetry(true)
+      setSymmetryAxis('x')
+    } else if (s.symmetryAxis === 'x') {
+      setSymmetryAxis('y')
+    } else if (s.symmetryAxis === 'y') {
+      setSymmetryAxis('z')
+    } else {
+      // Z → 关闭
+      setShowSymmetry(false)
+    }
+  }
+  const axisLabel = !settings.showSymmetry ? '' : settings.symmetryAxis === 'x' ? '左右' : settings.symmetryAxis === 'y' ? '上下' : '前后'
 
   const btnBaseV = 'flex flex-col items-center justify-center gap-0.5 w-10 h-10 rounded-lg text-[10px] font-medium transition-all duration-150'
   const btnBaseH = 'flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-150'
@@ -76,12 +93,19 @@ export function ViewerToolbar({ onClear, horizontal = false, showActions = true 
         </button>
 
         <button
-          onClick={toggleSymmetry}
+          onClick={cycleSymmetry}
           className={`${btnBase} ${settings.showSymmetry ? activeClass : inactiveClass}`}
-          title="对称性参考面"
+          title={`对称性参考面${settings.showSymmetry ? ` · ${axisLabel}` : ''}`}
         >
           <Columns2 className="h-4 w-4" />
-          {!horizontal && <span className="text-[9px] leading-none">对称</span>}
+          {!horizontal && (
+            <span className="text-[9px] leading-none">
+              {settings.showSymmetry ? axisLabel : '对称'}
+            </span>
+          )}
+          {horizontal && settings.showSymmetry && (
+            <span className="text-[10px] leading-none">{axisLabel}</span>
+          )}
         </button>
 
         <button

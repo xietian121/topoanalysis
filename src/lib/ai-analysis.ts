@@ -225,10 +225,10 @@ function formatCriterionScores(record: EvalHistoryRecord): string {
 
 function getTypeLabel(type: string): string {
   const labels: Record<string, string> = {
-    'game-static': '游戏·静态模型',
-    'game-dynamic': '游戏·可动模型（有骨骼动画）',
-    'general-static': '通用·静态模型',
-    'general-dynamic': '通用·可动模型（有骨骼动画）',
+    'game-static': '实时渲染·静态模型',
+    'game-dynamic': '实时渲染·可动模型（有骨骼动画）',
+    'general-static': '离线渲染·静态模型',
+    'general-dynamic': '离线渲染·可动模型（有骨骼动画）',
   }
   return labels[type] ?? type
 }

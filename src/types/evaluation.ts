@@ -17,15 +17,15 @@ export interface ModelTypeInfo {
 
 /** 模型类型标签映射 */
 export const MODEL_TYPE_LABELS: Record<EvaluationType, string> = {
-  'game-static': '游戏·静态模型',
-  'game-dynamic': '游戏·可动模型',
-  'general-static': '通用·静态模型',
-  'general-dynamic': '通用·可动模型',
+  'game-static': '实时渲染·静态模型',
+  'game-dynamic': '实时渲染·可动模型',
+  'general-static': '离线渲染·静态模型',
+  'general-dynamic': '离线渲染·可动模型',
 }
 
 export const MODEL_USAGE_LABELS: Record<ModelUsage, string> = {
-  game: '游戏模型',
-  general: '非游戏模型',
+  game: '实时渲染用模型',
+  general: '离线渲染用模型',
 }
 
 export const MODEL_ANIMATION_LABELS: Record<ModelAnimation, string> = {

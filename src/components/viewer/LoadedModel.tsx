@@ -162,16 +162,24 @@ export function LoadedModel({
     })
 
     if (objFaceData && objFaceData.groups.length > 0) {
-      // Flatten all face groups into a single wireframe to avoid mesh-to-group
-      // index mismatch. When the OBJ has hierarchical group structures (nested
-      // o/g/usemtl), THREE.js OBJLoader may produce a different child
-      // arrangement than the flat groups array from extractOBJFaceData.
-      // A unified wireframe on the root group covers all faces correctly.
+      // Flatten all face groups to avoid mesh-to-group index mismatch.
+      // The per-mesh mapping (meshes[idx] → groups[idx]) breaks when the OBJ
+      // has hierarchical o/g/usemtl structures because THREE.js OBJLoader may
+      // nest meshes inside intermediate Groups, while extractOBJFaceData
+      // produces a flat groups array.
+      //
+      // We build one unified wireframe from ALL faces and add it to the model
+      // clone (centeredModel.children[0]), which is in the same coordinate
+      // space as the OBJ vertex positions and shares the centering offset.
       const allFaces = objFaceData.groups.flat()
       if (allFaces.length > 0) {
         const lines = buildLinesFromOBJ(allFaces, objFaceData.positions)
         lines.name = 'WireframeEdges'
-        centeredModel.add(lines)
+        // Add to the model clone (not root) so lines share the centering
+        // position offset and scale with the meshes
+        const modelClone = centeredModel.children[0]
+        if (modelClone) modelClone.add(lines)
+        else centeredModel.add(lines) // fallback: shouldn't happen
       }
     } else {
       meshes.forEach((mesh) => {

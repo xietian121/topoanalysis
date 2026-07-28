@@ -748,12 +748,6 @@ export function StandardsPage() {
 
           {/* 优化建议系统 — 已删除 */}
 
-          {/* Footer */}
-          <div className="text-center pb-12">
-            <p className="text-[12px] text-text-tertiary">
-              TopoAnalysis · AI 3D 模型拓扑结构分析标准 v2.0 · 最后更新 2026-07-28
-            </p>
-          </div>
 
         </div>
       </div>

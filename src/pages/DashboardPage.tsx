@@ -627,10 +627,6 @@ export function DashboardPage() {
           )}
         </section>
 
-        {/* ===== Footer ===== */}
-        <p className="text-center text-[12px] text-text-tertiary pb-8">
-          AI 3D 拓扑低模评测工具 · Phase 2 · 评测对比分析平台
-        </p>
       </div>
     </div>
   )

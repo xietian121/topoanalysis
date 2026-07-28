@@ -509,14 +509,38 @@ export function DashboardPage() {
             </Badge>
           </div>
 
-          {/* User models filter bar */}
+          {/* User models filter bar — 评测状态（大筛） */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[12px] font-semibold text-text-secondary shrink-0">筛选：</span>
+            <div className="flex items-center gap-2">
+              {([
+                { key: 'all' as const, label: '全部状态' },
+                { key: 'evaluated' as const, label: '已评测' },
+                { key: 'unevaluated' as const, label: '未评测' },
+              ]).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setUserEvalStatus(key)}
+                  className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-all duration-200 ${
+                    userEvalStatus === key
+                      ? 'bg-accent text-white shadow-sm shadow-accent/20'
+                      : 'bg-black/[0.04] text-text-tertiary hover:bg-black/[0.07] hover:text-text-secondary'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Secondary filter bar — 用途 + 类型 */}
           <div className="flex items-center gap-3 mb-4">
-            <span className="text-[11px] font-medium text-text-tertiary shrink-0">筛选：</span>
+            <span className="text-[11px] font-medium text-text-tertiary shrink-0">类型：</span>
             <div className="flex items-center gap-1">
               {([
                 { key: 'all' as const, label: '全部用途' },
-                { key: 'game' as const, label: '游戏模型' },
-                { key: 'general' as const, label: '非游戏模型' },
+                { key: 'game' as const, label: '游戏' },
+                { key: 'general' as const, label: '通用' },
               ]).map(({ key, label }) => (
                 <button
                   key={key}
@@ -543,26 +567,6 @@ export function DashboardPage() {
                   onClick={() => setUserAnimation(key)}
                   className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all duration-200 ${
                     userAnimation === key
-                      ? 'bg-black/[0.06] text-text-primary'
-                      : 'text-text-tertiary hover:bg-black/[0.04] hover:text-text-secondary'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <span className="text-[11px] text-text-tertiary">·</span>
-            <div className="flex items-center gap-1">
-              {([
-                { key: 'all' as const, label: '全部状态' },
-                { key: 'evaluated' as const, label: '已评测' },
-                { key: 'unevaluated' as const, label: '未评测' },
-              ]).map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setUserEvalStatus(key)}
-                  className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all duration-200 ${
-                    userEvalStatus === key
                       ? 'bg-black/[0.06] text-text-primary'
                       : 'text-text-tertiary hover:bg-black/[0.04] hover:text-text-secondary'
                   }`}

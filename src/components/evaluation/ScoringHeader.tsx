@@ -126,6 +126,9 @@ export function ScoringHeader() {
         catch { record.thumbnailUrl = '' }
       }
 
+      // 清除旧的用户记录，只保留本次新记录
+      useEvalHistoryStore.getState().clearAll()
+
       addRecord(record)
       finishFlow()
       setHighlight(null)

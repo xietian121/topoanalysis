@@ -143,6 +143,18 @@ export const useEvalHistoryStore = create<EvalHistoryStore>()(
 
         return state as EvalHistoryStore
       },
+      // 水化后验证：清除无模型数据的已完成用户记录（modelText 被 partialize 清空）
+      onRehydrateStorage: () => {
+        return (state, error) => {
+          if (error || !state?.records) return
+          state.records = state.records.filter((r) => {
+            if (r.isExample) return true                       // 示例模型永远保留
+            if (r.evalStatus !== 'completed') return false     // 未完成的清除
+            if (r.modelUrl || r.modelText) return true         // 有模型数据的保留
+            return false                                       // 无模型数据的孤儿清除
+          })
+        }
+      },
     },
   ),
 )

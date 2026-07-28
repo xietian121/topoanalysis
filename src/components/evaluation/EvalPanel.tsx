@@ -410,8 +410,7 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
                           setExpandedId(null)
                         } else {
                           setExpandedId(crit.id)
-                          // Only navigate flow when criterion is active (not disabled optional)
-                          if (isFlowActive && !isOptDisabled && flowIdx >= 0) flowGoTo(flowIdx)
+                          if (isFlowActive && flowIdx >= 0) flowGoTo(flowIdx)
                         }
                       }}
                       className={`w-full text-left rounded-lg px-3 py-2 transition-all duration-150 ${
@@ -433,14 +432,14 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
                         <span className={`mono text-[11px] ml-2 shrink-0 ${
                           score > 0 ? 'text-accent font-semibold' : 'text-text-tertiary'
                         }`}>
-                          {isOptDisabled ? '—' : `${score}/10`}
+                          {`${score}/10`}
                         </span>
                       </div>
                       {/* Slider bar */}
                       <div className="h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-300"
-                          style={{ width: `${isOptDisabled ? 0 : pct}%`, backgroundColor: score > 0 ? dimColor : 'transparent' }}
+                          style={{ width: `${pct}%`, backgroundColor: score > 0 ? dimColor : 'transparent' }}
                         />
                       </div>
                       {/* Dimension name + criterion weight */}
@@ -481,7 +480,6 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
                             optional={isOptional}
                             optionalEnabled={symmetryEnabled}
                             onToggleOptional={(v) => {
-                              console.log('[EvalPanel] onToggleOptional:', { v, isFlowActive, evaluationType })
                               if (isFlowActive) {
                                 // Update symmetry state and rebuild flow criteria
                                 // WITHOUT canceling the flow — scores preserved
@@ -500,7 +498,6 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
                                     optional: c.optional,
                                   })),
                                 )
-                                console.log('[EvalPanel] newCriteria after toggle:', newCriteria.map(c => ({ id: c.id, maxScore: c.maxScore, optional: c.optional })))
                                 // Update flow criteria in-place (scores survive)
                                 useEvalFlowStore.getState().updateCriteria(newCriteria)
                                 return

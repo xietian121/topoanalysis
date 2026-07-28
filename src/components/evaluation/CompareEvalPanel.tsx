@@ -299,7 +299,7 @@ export function CompareEvalPanel() {
                           setExpandedId(null)
                         } else {
                           setExpandedId(crit.id)
-                          if (isFlowActive && !isOptDisabled && flowIdx >= 0) flowGoTo(flowIdx)
+                          if (isFlowActive && flowIdx >= 0) flowGoTo(flowIdx)
                         }
                       }}
                       className={`w-full text-left rounded-lg px-3 py-2 transition-all duration-150 ${
@@ -321,14 +321,14 @@ export function CompareEvalPanel() {
                         <span className={`mono text-[11px] ml-2 shrink-0 ${
                           score > 0 ? 'text-accent font-semibold' : 'text-text-tertiary'
                         }`}>
-                          {isOptDisabled ? '—' : `${score}/10`}
+                          {`${score}/10`}
                         </span>
                       </div>
                       {/* Slider bar */}
                       <div className="h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-300"
-                          style={{ width: `${isOptDisabled ? 0 : pct}%`, backgroundColor: score > 0 ? dimColor : 'transparent' }}
+                          style={{ width: `${pct}%`, backgroundColor: score > 0 ? dimColor : 'transparent' }}
                         />
                       </div>
                       {/* Dimension name + criterion weight */}

@@ -161,7 +161,9 @@ export function FlowReviewCard({
     : null
   const recommendation = autoReport ? getRecommendation(criterion, autoReport) : null
 
-  const isOptionalDisabled = optional && !optionalEnabled
+  // Scoring UI is always visible during flow, regardless of optional toggle state.
+  // The toggle only controls whether the score counts toward the total (via maxScore).
+  const isOptionalOff = optional && !optionalEnabled
 
   return (
     <div className="mt-2 space-y-3 px-1">
@@ -233,109 +235,113 @@ export function FlowReviewCard({
         {criterion.description}
       </p>
 
-      {/* ═══ 打分区域（可选未启用时隐藏） ═══ */}
-      {!isOptionalDisabled && (
-        <>
-          {/* Auto detection data */}
-          {autoData && (
-            <div className="rounded-lg bg-black/[0.03] px-3 py-2 border border-black/[0.04]">
-              <p className="text-[11px] text-text-primary">{autoData}</p>
-            </div>
-          )}
+      {/* ═══ 打分区域（始终可见，开关只控制是否计入总分） ═══ */}
+      <>
+        {/* Optional-off notice */}
+        {isOptionalOff && (
+          <div className="rounded-lg bg-amber-50 px-3 py-2 border border-amber-200">
+            <p className="text-[11px] text-amber-700 leading-relaxed">
+              对称性评测未启用，当前打分不会被计入总分。开启上方开关后，打分将按权重计入。
+            </p>
+          </div>
+        )}
 
-          {/* Recommendation */}
-          {recommendation && (
-            <div className="rounded-lg bg-accent/[0.06] px-3 py-2 border border-accent/[0.1]">
-              <div className="flex items-start gap-1.5">
-                <Lightbulb className="h-3.5 w-3.5 text-accent shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <span className="text-[10px] font-semibold text-accent uppercase tracking-wider">
-                    推荐打分
-                  </span>
-                  <p className="mt-0.5 text-[11px] text-text-secondary leading-relaxed">{recommendation}</p>
-                  {criterion.scoringRule && (
-                    <p className="mt-0.5 text-[10px] text-text-tertiary">规则：{criterion.scoringRule}</p>
-                  )}
-                </div>
+        {/* Auto detection data */}
+        {autoData && (
+          <div className="rounded-lg bg-black/[0.03] px-3 py-2 border border-black/[0.04]">
+            <p className="text-[11px] text-text-primary">{autoData}</p>
+          </div>
+        )}
+
+        {/* Recommendation */}
+        {recommendation && (
+          <div className="rounded-lg bg-accent/[0.06] px-3 py-2 border border-accent/[0.1]">
+            <div className="flex items-start gap-1.5">
+              <Lightbulb className="h-3.5 w-3.5 text-accent shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <span className="text-[10px] font-semibold text-accent uppercase tracking-wider">
+                  推荐打分
+                </span>
+                <p className="mt-0.5 text-[11px] text-text-secondary leading-relaxed">{recommendation}</p>
+                {criterion.scoringRule && (
+                  <p className="mt-0.5 text-[10px] text-text-tertiary">规则：{criterion.scoringRule}</p>
+                )}
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Score dots — 0~10 */}
-          <div className="flex items-center justify-center gap-1">
-            {Array.from({ length: 11 }, (_, i) => {
-              const s = i // 0,1,2,...,10
-              const active = currentScore > 0 ? s <= currentScore : false
-              const isZero = s === 0
-              return (
-                <button
-                  key={s}
-                  onClick={() => {
-                    console.log('[FlowReviewCard] Score click:', { criterionId: criterion.id, score: s, optional, optionalEnabled, isOptionalDisabled })
-                    onSetScore(criterion.id, s)
-                  }}
-                  className={`w-6 h-6 rounded-full text-[10px] font-semibold transition-all duration-150 flex items-center justify-center ${
-                    active
+        {/* Score dots — 0~10 */}
+        <div className="flex items-center justify-center gap-1">
+          {Array.from({ length: 11 }, (_, i) => {
+            const s = i // 0,1,2,...,10
+            const active = currentScore > 0 ? s <= currentScore : false
+            const isZero = s === 0
+            return (
+              <button
+                key={s}
+                onClick={() => onSetScore(criterion.id, s)}
+                className={`w-6 h-6 rounded-full text-[10px] font-semibold transition-all duration-150 flex items-center justify-center ${
+                  active
+                    ? 'bg-accent text-white shadow-sm scale-105'
+                    : isZero && currentScore === 0
                       ? 'bg-accent text-white shadow-sm scale-105'
-                      : isZero && currentScore === 0
-                        ? 'bg-accent text-white shadow-sm scale-105'
-                        : 'bg-black/[0.04] text-text-tertiary hover:bg-black/[0.08] hover:text-text-secondary'
-                  }`}
-                  title={`${s}分`}
-                >
-                  {s}
-                </button>
-              )
-            })}
-          </div>
-          <div className="text-center">
-            <span className={`mono text-sm font-bold ${currentScore > 0 ? 'text-accent' : currentScore === 0 ? 'text-accent' : 'text-text-tertiary'}`}>
-              {currentScore > 0 ? `${currentScore}/10` : currentScore === 0 ? '0/10' : '未打分'}
-            </span>
-            <span className="text-[10px] text-text-tertiary ml-2">
-              {scoredCount}/{totalCount} 已评
-            </span>
-          </div>
+                      : 'bg-black/[0.04] text-text-tertiary hover:bg-black/[0.08] hover:text-text-secondary'
+                }`}
+                title={`${s}分`}
+              >
+                {s}
+              </button>
+            )
+          })}
+        </div>
+        <div className="text-center">
+          <span className={`mono text-sm font-bold ${currentScore > 0 ? 'text-accent' : currentScore === 0 ? 'text-accent' : 'text-text-tertiary'}`}>
+            {currentScore > 0 ? `${currentScore}/10` : currentScore === 0 ? '0/10' : '未打分'}
+          </span>
+          <span className="text-[10px] text-text-tertiary ml-2">
+            {scoredCount}/{totalCount} 已评
+          </span>
+        </div>
 
-          {/* Nav buttons */}
-          <div className="flex items-center justify-center gap-2">
+        {/* Nav buttons */}
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={onPrev}
+            disabled={isFirst}
+            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-200 ${
+              isFirst
+                ? 'text-text-tertiary opacity-30 cursor-not-allowed'
+                : 'glass-btn text-text-primary hover:bg-black/[0.06]'
+            }`}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            上条
+          </button>
+          {isLast ? (
             <button
-              onClick={onPrev}
-              disabled={isFirst}
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-200 ${
-                isFirst
-                  ? 'text-text-tertiary opacity-30 cursor-not-allowed'
-                  : 'glass-btn text-text-primary hover:bg-black/[0.06]'
+              onClick={onFinish}
+              disabled={!allScored}
+              className={`flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition-all duration-200 ${
+                allScored
+                  ? 'glass-btn-accent text-white'
+                  : 'bg-black/[0.04] text-text-tertiary cursor-not-allowed'
               }`}
             >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              上条
+              <Check className="h-3.5 w-3.5" />
+              完成
             </button>
-            {isLast ? (
-              <button
-                onClick={onFinish}
-                disabled={!allScored}
-                className={`flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition-all duration-200 ${
-                  allScored
-                    ? 'glass-btn-accent text-white'
-                    : 'bg-black/[0.04] text-text-tertiary cursor-not-allowed'
-                }`}
-              >
-                <Check className="h-3.5 w-3.5" />
-                完成
-              </button>
-            ) : (
-              <button
-                onClick={onNext}
-                className="flex items-center gap-1 rounded-full glass-btn px-2.5 py-1 text-[11px] font-medium text-text-primary"
-              >
-                下条
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        </>
-      )}
+          ) : (
+            <button
+              onClick={onNext}
+              className="flex items-center gap-1 rounded-full glass-btn px-2.5 py-1 text-[11px] font-medium text-text-primary"
+            >
+              下条
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </>
     </div>
   )
 }

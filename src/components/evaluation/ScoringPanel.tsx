@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback, useState, useRef } from 'react'
+import { useEffect, useMemo, useCallback, useState } from 'react'
 import { ListChecks } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -32,11 +32,9 @@ export function ScoringPanel() {
   const flowGoTo = useEvalFlowStore((s) => s.goTo)
   const flowSetScore = useEvalFlowStore((s) => s.setScore)
   const flowFinish = useEvalFlowStore((s) => s.finishFlow)
-  const cancelFlow = useEvalFlowStore((s) => s.cancelFlow)
   const setHighlight = useHighlightStore((s) => s.setCriterion)
   const setShowSymmetry = useViewerStore((s) => s.setShowSymmetry)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const symmetryToggleRef = useRef(false)
 
   // Sync expandedId with flow currentIndex when navigating via prev/next buttons
   useEffect(() => {
@@ -45,15 +43,9 @@ export function ScoringPanel() {
     }
   }, [isFlowActive, flowCurrentIndex, flowCriteria])
 
-  // Clear expanded when flow closes (unless symmetry was toggled)
+  // Clear expanded when flow closes
   useEffect(() => {
-    if (!isFlowActive) {
-      if (symmetryToggleRef.current) {
-        symmetryToggleRef.current = false
-        return
-      }
-      setExpandedId(null)
-    }
+    if (!isFlowActive) setExpandedId(null)
   }, [isFlowActive])
 
   // Sync highlight to current criterion + auto-switch render mode for density
@@ -94,6 +86,7 @@ export function ScoringPanel() {
         maxScore: c.maxScore,
         method: c.method,
         dimensionName: dim.name,
+        scoringRule: c.scoringRule,
         optional: c.optional,
       })),
     )
@@ -175,10 +168,13 @@ export function ScoringPanel() {
               )}
             </h4>
             <div className="space-y-1">
-              {allCriteria.map((crit, idx) => {
+              {allCriteria.map((crit, _idx) => {
                 const score = isFlowActive ? (flowScores[crit.id] ?? 0) : 0
                 const isExpanded = expandedId === crit.id
-                const isCurrent = isFlowActive && idx === flowCurrentIndex
+                // Use flowCriteria index for current detection, not allCriteria idx,
+                // so navigation stays correct even if criteria lists differ
+                const flowIdx = isFlowActive ? flowCriteria.findIndex(c => c.id === crit.id) : -1
+                const isCurrent = isFlowActive && flowIdx === flowCurrentIndex
                 const pct = (score / 10) * 100
                 const dimIdx = standard.dimensions.findIndex((d) =>
                   d.criteria.some((c) => c.id === crit.id),
@@ -196,7 +192,7 @@ export function ScoringPanel() {
                           setExpandedId(null)
                         } else {
                           setExpandedId(crit.id)
-                          if (isFlowActive && !isOptDisabled) flowGoTo(idx)
+                          if (isFlowActive && flowIdx >= 0) flowGoTo(flowIdx)
                         }
                       }}
                       className={`w-full text-left rounded-lg px-3 py-2 transition-all duration-150 ${
@@ -218,14 +214,14 @@ export function ScoringPanel() {
                         <span className={`mono text-[11px] ml-2 shrink-0 ${
                           score > 0 ? 'text-accent font-semibold' : 'text-text-tertiary'
                         }`}>
-                          {isOptDisabled ? '—' : `${score}/10`}
+                          {`${score}/10`}
                         </span>
                       </div>
                       {/* Slider bar */}
                       <div className="h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-300"
-                          style={{ width: `${isOptDisabled ? 0 : pct}%`, backgroundColor: score > 0 ? dimColor : 'transparent' }}
+                          style={{ width: `${pct}%`, backgroundColor: score > 0 ? dimColor : 'transparent' }}
                         />
                       </div>
                       {/* Dimension name + criterion weight */}
@@ -245,29 +241,47 @@ export function ScoringPanel() {
                             criterion={crit}
                             currentScore={score}
                             onSetScore={flowSetScore}
-                            onPrev={() => flowGoTo(idx - 1)}
-                            onNext={() => flowGoTo(idx + 1)}
+                            onPrev={() => {
+                              if (flowIdx > 0) flowGoTo(flowIdx - 1)
+                            }}
+                            onNext={() => {
+                              if (flowIdx >= 0 && flowIdx < flowCriteria.length - 1) flowGoTo(flowIdx + 1)
+                            }}
                             onFinish={() => {
                               const { total } = computeFlowTotal(flowCriteria, flowScores)
                               setFlowResult({ ...flowScores }, total)
                               setHighlight(null)
                               flowFinish()
                             }}
-                            isFirst={idx === 0}
-                            isLast={idx === allCriteria.length - 1}
-                            allScored={isAllScored(allCriteria, flowScores)}
+                            isFirst={flowIdx === 0}
+                            isLast={flowIdx === flowCriteria.length - 1}
+                            allScored={isAllScored(isFlowActive ? flowCriteria : allCriteria, flowScores)}
                             autoReport={autoReport}
                             scoredCount={Object.keys(flowScores).length}
-                            totalCount={allCriteria.length}
+                            totalCount={isFlowActive ? flowCriteria.length : allCriteria.length}
                             optional={isOptional}
                             optionalEnabled={symmetryEnabled}
                             onToggleOptional={(v) => {
-                              // 切换对称性时，若 flow 已激活则先重置（准则权重已变更）
                               if (isFlowActive) {
-                                symmetryToggleRef.current = true
-                                cancelFlow()
-                                resetFlowResult()
-                                setHighlight(null)
+                                // Update symmetry state and rebuild flow criteria
+                                // WITHOUT canceling the flow — scores preserved
+                                setSymmetryEnabled(v)
+                                setShowSymmetry(v)
+                                const newStandard = getStandardByType(evaluationType, v)
+                                const newCriteria = newStandard.dimensions.flatMap((dim) =>
+                                  dim.criteria.map((c) => ({
+                                    id: c.id,
+                                    name: c.name,
+                                    description: c.description,
+                                    maxScore: c.maxScore,
+                                    method: c.method,
+                                    dimensionName: dim.name,
+                                    scoringRule: c.scoringRule,
+                                    optional: c.optional,
+                                  })),
+                                )
+                                useEvalFlowStore.getState().updateCriteria(newCriteria)
+                                return
                               }
                               setSymmetryEnabled(v)
                               setShowSymmetry(v)

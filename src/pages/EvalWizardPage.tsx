@@ -327,6 +327,12 @@ export function EvalWizardPage() {
                 <p className="text-[11px] text-text-tertiary">
                   用于结构对比的高精度参考模型（可选）
                 </p>
+                <div className="rounded-lg bg-blue-50/60 border border-blue-200/60 px-4 py-2.5">
+                  <p className="text-[12px] text-blue-700 leading-relaxed">
+                    💡 <span className="font-semibold">强烈建议上传高模参考</span> — 高模是评判低模拓扑匹配度的核心参照。
+                    上传后可对比分析低模布线是否精准还原了高模的结构轮廓，评测结论将更具参考价值。
+                  </p>
+                </div>
                 {!highUploadDone ? (
                   <ModelDropZone
                     isLoading={highLoading}
@@ -366,12 +372,6 @@ export function EvalWizardPage() {
                 )}
               </div>
 
-              {/* Hint when only low is uploaded */}
-              {uploadDone && !highUploadDone && (
-                <div className="text-center text-[12px] text-amber-500">
-                  建议上传高模作为参考，以启用结构对比功能。也可直接开始评测。
-                </div>
-              )}
             </div>
           )}
 

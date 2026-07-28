@@ -67,12 +67,13 @@ export function ScoringPanel() {
   // Run auto-analysis when model loads
   useEffect(() => {
     if (modelObject) {
+      resetFlowResult()
       const report = analyzeTopology(modelObject, objFaceData)
       setAutoReport(report)
     } else {
       resetEval()
     }
-  }, [modelObject, objFaceData, setAutoReport, resetEval])
+  }, [modelObject, objFaceData, setAutoReport, resetEval, resetFlowResult])
 
   const standard = getStandardByType(evaluationType, symmetryEnabled)
 

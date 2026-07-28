@@ -77,12 +77,13 @@ export function CompareEvalPanel() {
   // Run auto-analysis when low model loads
   useEffect(() => {
     if (lowModel.object) {
+      resetFlowResult()
       const report = analyzeTopology(lowModel.object, lowModel.faceData)
       setAutoReport(report)
     } else {
       resetEval()
     }
-  }, [lowModel.object, lowModel.faceData, setAutoReport, resetEval])
+  }, [lowModel.object, lowModel.faceData, setAutoReport, resetEval, resetFlowResult])
 
   const standard = getStandardByType(evaluationType, symmetryEnabled)
   const scores = autoReport

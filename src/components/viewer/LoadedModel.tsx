@@ -162,14 +162,17 @@ export function LoadedModel({
     })
 
     if (objFaceData && objFaceData.groups.length > 0) {
-      meshes.forEach((mesh, idx) => {
-        const faces = objFaceData.groups[idx]
-        if (faces && faces.length > 0) {
-          const lines = buildLinesFromOBJ(faces, objFaceData.positions)
-          lines.name = 'WireframeEdges'
-          mesh.add(lines)
-        }
-      })
+      // Flatten all face groups into a single wireframe to avoid mesh-to-group
+      // index mismatch. When the OBJ has hierarchical group structures (nested
+      // o/g/usemtl), THREE.js OBJLoader may produce a different child
+      // arrangement than the flat groups array from extractOBJFaceData.
+      // A unified wireframe on the root group covers all faces correctly.
+      const allFaces = objFaceData.groups.flat()
+      if (allFaces.length > 0) {
+        const lines = buildLinesFromOBJ(allFaces, objFaceData.positions)
+        lines.name = 'WireframeEdges'
+        centeredModel.add(lines)
+      }
     } else {
       meshes.forEach((mesh) => {
         if (mesh.geometry) {

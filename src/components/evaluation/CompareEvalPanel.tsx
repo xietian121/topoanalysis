@@ -363,19 +363,24 @@ export function CompareEvalPanel() {
                             }}
                             isFirst={idx === 0}
                             isLast={idx === allCriteria.length - 1}
-                            allScored={isAllScored(allCriteria, flowScores)}
+                            allScored={isAllScored(isFlowActive ? flowCriteria : allCriteria, flowScores)}
                             autoReport={autoReport}
                             scoredCount={Object.keys(flowScores).length}
-                            totalCount={allCriteria.length}
+                            totalCount={isFlowActive ? flowCriteria.length : allCriteria.length}
                             optional={isOptional}
                             optionalEnabled={symmetryEnabled}
                             onToggleOptional={(v) => {
-                              // 切换对称性时，若 flow 已激活则先重置（准则权重已变更）
+                              // 流程中切换对称性：先确认，避免意外丢失已打分数
                               if (isFlowActive) {
-                                symmetryToggleRef.current = true
-                                cancelFlow()
-                                resetFlowResult()
-                                setHighlight(null)
+                                if (window.confirm('切换对称性评测状态将重置当前逐条审核进度，已填写的分数将丢失。确定继续吗？')) {
+                                  symmetryToggleRef.current = true
+                                  cancelFlow()
+                                  resetFlowResult()
+                                  setHighlight(null)
+                                  setSymmetryEnabled(v)
+                                  setShowSymmetry(v)
+                                }
+                                return
                               }
                               setSymmetryEnabled(v)
                               setShowSymmetry(v)

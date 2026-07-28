@@ -32,6 +32,8 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const evaluationType = useEvalStore((s) => s.evaluationType)
   const setEvaluationType = useEvalStore((s) => s.setEvaluationType)
+  const symmetryEnabled = useEvalStore((s) => s.symmetryEnabled)
+  const setSymmetryEnabled = useEvalStore((s) => s.setSymmetryEnabled)
   const autoReport = useEvalStore((s) => s.autoReport)
   const setAutoReport = useEvalStore((s) => s.setAutoReport)
   const manualRatings = useEvalStore((s) => s.manualRatings)
@@ -54,7 +56,6 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
   const setHighlight = useHighlightStore((s) => s.setCriterion)
   const setShowSymmetry = useViewerStore((s) => s.setShowSymmetry)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [symmetryEnabled, setSymmetryEnabled] = useState(false)
 
   // Sync expandedId with flow currentIndex when navigating via prev/next buttons
   useEffect(() => {
@@ -96,7 +97,7 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
 
   const standard = getStandardByType(evaluationType, symmetryEnabled)
   const scores = autoReport
-    ? computeTotalScore(evaluationType, autoReport, manualRatings)
+    ? computeTotalScore(evaluationType, autoReport, manualRatings, symmetryEnabled)
     : { autoTotal: 0, manualTotal: 0, total: 0, maxTotal: 100 }
 
   // Derive full criteria list from standard — always available once model is loaded
@@ -199,7 +200,7 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
       symmetryEnabled: symmetryEnabled || undefined,
     }
     addRecord(record)
-  }, [currentModel, autoReport, evaluationType, scores, displayScores, manualRatings, flowReviewScores, addRecord])
+  }, [currentModel, autoReport, evaluationType, symmetryEnabled, scores, displayScores, manualRatings, flowReviewScores, addRecord])
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`
@@ -285,15 +286,23 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
         {/* Symmetry toggle */}
         {currentModel && (
           <section>
-            <label className="flex items-center gap-3 cursor-pointer select-none">
+            <label
+              className={`flex items-center gap-3 select-none ${
+                isFlowActive || !!flowReviewScores
+                  ? 'cursor-not-allowed opacity-50'
+                  : 'cursor-pointer'
+              }`}
+            >
               <div className="relative">
                 <input
                   type="checkbox"
                   checked={symmetryEnabled}
                   onChange={(e) => {
+                    if (isFlowActive || flowReviewScores) return
                     setSymmetryEnabled(e.target.checked)
                     setShowSymmetry(e.target.checked)
                   }}
+                  disabled={isFlowActive || !!flowReviewScores}
                   className="sr-only"
                 />
                 <div className={`w-9 h-5 rounded-full transition-colors duration-200 ${symmetryEnabled ? 'bg-accent' : 'bg-black/[0.12]'}`}>
@@ -305,6 +314,11 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
                 <p className="text-[10px] text-text-tertiary mt-0.5">
                   勾选后将在布线合理性维度新增对称性准则，权重自动调整，3D 视口显示对称参考面
                 </p>
+                {(isFlowActive || !!flowReviewScores) && (
+                  <p className="text-[10px] text-amber-500 mt-0.5">
+                    请先完成或重置逐条审核后再切换对称性
+                  </p>
+                )}
               </div>
             </label>
           </section>
@@ -444,10 +458,10 @@ export function EvalPanel({ locked = false }: EvalPanelProps) {
                             }}
                             isFirst={idx === 0}
                             isLast={idx === allCriteria.length - 1}
-                            allScored={isAllScored(allCriteria, flowScores)}
+                            allScored={isAllScored(isFlowActive ? flowCriteria : allCriteria, flowScores)}
                             autoReport={autoReport}
                             scoredCount={Object.keys(flowScores).length}
-                            totalCount={allCriteria.length}
+                            totalCount={isFlowActive ? flowCriteria.length : allCriteria.length}
                           />
                         </div>
                       </div>
